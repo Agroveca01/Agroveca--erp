@@ -1,0 +1,60 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply text-white font-sans antialiased;
+    background-color: #0a0c10;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+
+  * {
+    border-color: #30363d;
+  }
+}
+
+@layer utilities {
+  .glass-card {
+    background-color: #161b22;
+    border: 1px solid #30363d;
+  }
+
+  .glass-card-hover {
+    @apply transition-colors duration-150 hover:border-[#10b981]/30;
+  }
+
+  .btn-primary {
+    @apply bg-[#10b981] hover:bg-[#059669] text-white font-medium px-4 py-2 rounded-lg transition-colors duration-150;
+  }
+
+  .btn-warning {
+    @apply bg-[#f59e0b] hover:bg-[#d97706] text-white font-medium px-4 py-2 rounded-lg transition-colors duration-150;
+  }
+
+  .btn-danger {
+    @apply bg-red-600 hover:bg-red-700 text-white font-medium px-4 py-2 rounded-lg transition-colors duration-150;
+  }
+
+  .btn-secondary {
+    @apply bg-[#30363d] hover:bg-[#484f58] text-slate-200 font-medium px-4 py-2 rounded-lg transition-colors duration-150 border border-[#30363d];
+  }
+
+  .text-muted {
+    @apply text-slate-400;
+  }
+
+  .gradient-emerald {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(5, 150, 105, 0.08) 100%);
+  }
+
+  .gradient-amber {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(217, 119, 6, 0.08) 100%);
+  }
+
+  .gradient-slate {
+    background: linear-gradient(180deg, #161b22 0%, #0d1117 100%);
+  }
+}
