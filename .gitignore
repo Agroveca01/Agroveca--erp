@@ -7,7 +7,7 @@ pnpm-debug.log*
 lerna-debug.log*
 
 # Supabase .temp
-.supabase/.temp
+supabase/.temp
 
 node_modules
 dist
