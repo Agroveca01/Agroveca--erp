@@ -97,19 +97,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (authError) return { error: authError };
 
-      if (authData.user) {
-        const { error: profileError } = await supabase
-          .from('user_profiles')
-          .insert({
-            user_id: authData.user.id,
-            email: email,
-            full_name: fullName,
-          });
-
-        if (profileError) {
-          console.error('Error creating profile:', profileError);
-          return { error: new Error('Database error saving new user: ' + profileError.message) };
-        }
+      if (authData.user && authData.session) {
+        await loadProfile(authData.user.id);
       }
 
       return { error: null };
