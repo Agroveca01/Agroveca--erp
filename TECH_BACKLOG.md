@@ -63,15 +63,18 @@ Traducir los riesgos y gaps detectados en `PRD.md` en un backlog tecnico acciona
 
 ### 3. Unificar cliente Supabase y tipos de dominio
 
+**Estado**
+- Resuelto en cliente: `src/utils/supabase.ts` fue eliminado y `src/lib/supabase.ts` queda como entrada canonica.
+- Pendiente parcial: seguir consolidando los tipos/export surface compartidos segun evolucione el dominio.
+
 **Problema**
-- Hay duplicidad de cliente Supabase y los tipos compartidos no siempre coinciden con el uso real de los modulos.
+- Los tipos compartidos no siempre coinciden con el uso real de los modulos y antes existia duplicidad de cliente Supabase ya resuelta.
 
 **Impacto**
 - Duplica puntos de mantenimiento y favorece que cada modulo opere con supuestos distintos.
 
 **Archivos mas afectados**
 - `src/lib/supabase.ts`
-- `src/utils/supabase.ts`
 - modulos que importan tipos desde `src/lib/supabase.ts`
 
 **Trabajo sugerido**

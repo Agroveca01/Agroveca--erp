@@ -83,7 +83,7 @@ Necesita cotizar, vender, dar seguimiento a clientes, operar CRM/VIP, preparar p
 
 - deuda tecnica de tipado que reduce confiabilidad del estado real;
 - inconsistencias de nombres de roles entre UI, frontend y base;
-- duplicidad de cliente Supabase;
+- necesidad de sostener una unica fuente de verdad para el cliente y los tipos compartidos de Supabase;
 - diferencia entre lo que la UI promete y lo que ciertas funciones realmente ejecutan.
 
 ## 9. North Star y metricas estrategicas

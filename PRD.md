@@ -348,7 +348,7 @@ Entidades principales observadas:
 - `src/components/FinancialHealthModule.tsx` referencia tipos/campos no presentes en `src/lib/supabase.ts`.
 - `supabase/functions/send-vip-email/index.ts` responde exito pero no integra un proveedor real de correo.
 - `supabase/functions/shopify-webhook/index.ts` lee HMAC pero no valida la firma.
-- `src/utils/supabase.ts` duplica cliente frente a `src/lib/supabase.ts`.
+- Historicamente existio duplicidad de cliente Supabase frente a `src/lib/supabase.ts`; ese punto ya fue resuelto y debe mantenerse asi.
 - `src/components/PurchasesModule.tsx` no cubre alta de nuevos items de `packaging_inventory` cuando no existen.
 
 ## 12. Riesgos

@@ -55,17 +55,17 @@ Convertir `TECH_BACKLOG.md` en tareas concretas, ejecutables y faciles de asigna
 
 ### ISSUE P0-03 - Consolidar cliente Supabase y exports tipados
 
+- `Estado`: parcialmente resuelto; el cliente duplicado ya fue eliminado y queda pendiente mantener la fuente unica de tipos/export surface.
+
 - `Tipo`: refactor / arquitectura
 - `Bloquea`: `P0-04`, `P1-09`, `P2-11`
 - `Archivos`:
   - `src/lib/supabase.ts`
-  - `src/utils/supabase.ts`
   - modulos que importan cliente o tipos Supabase
 - `Problema concreto`:
-  - Existen dos entradas de cliente Supabase y faltan/colisionan tipos compartidos.
+  - La duplicidad de cliente ya se resolvio, pero los tipos compartidos todavia requieren consolidacion continua para evitar colisiones o vacios.
 - `Tareas`:
-  - Elegir una unica ubicacion canonica del cliente.
-  - Migrar imports de modulos consumidores.
+  - Mantener `src/lib/supabase.ts` como ubicacion canonica del cliente y tipos.
   - Revisar tipos exportados, incluyendo entidades faltantes o mal nombradas.
   - Dejar una sola fuente de verdad para contratos de datos.
 - `Cierre esperado`:
