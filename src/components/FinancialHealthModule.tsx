@@ -1,36 +1,42 @@
 import { useState, useEffect } from 'react';
 import { TrendingUp, TrendingDown, AlertCircle, DollarSign, BarChart3, PieChart } from 'lucide-react';
-import { supabase, AccountsPayable, AccountsReceivable, SalesOrder, Customer } from '../lib/supabase';
+import { supabase, AccountsPayable, AccountsReceivable, Customer, CustomerOrder, SalesOrder } from '../lib/supabase';
+
+type TopCustomer = Customer & {
+  orderCount: number;
+  totalSpent: number;
+  totalUnits: number;
+  paymentScore: string | null;
+};
 
 export default function FinancialHealthModule() {
   const [payables, setPayables] = useState<AccountsPayable[]>([]);
   const [receivables, setReceivables] = useState<AccountsReceivable[]>([]);
   const [orders, setOrders] = useState<SalesOrder[]>([]);
+  const [customerOrders, setCustomerOrders] = useState<CustomerOrder[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadData();
   }, []);
 
   const loadData = async () => {
-    setLoading(true);
     try {
-      const [payablesData, receivablesData, ordersData, customersData] = await Promise.all([
+      const [payablesData, receivablesData, ordersData, customerOrdersData, customersData] = await Promise.all([
         supabase.from('accounts_payable').select('*').eq('status', 'pending'),
         supabase.from('accounts_receivable').select('*, customers(*)').eq('status', 'pending'),
         supabase.from('sales_orders').select('*'),
+        supabase.from('customer_orders').select('*'),
         supabase.from('customers').select('*'),
       ]);
 
       setPayables(payablesData.data || []);
       setReceivables(receivablesData.data || []);
       setOrders(ordersData.data || []);
+      setCustomerOrders(customerOrdersData.data || []);
       setCustomers(customersData.data || []);
     } catch (error) {
       console.error('Error loading data:', error);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -54,8 +60,8 @@ export default function FinancialHealthModule() {
     return orderDate.getMonth() === thisMonth && orderDate.getFullYear() === thisYear;
   });
 
-  const shopifyOrders = monthlyOrders.filter((o) => o.sales_channel === 'shopify');
-  const wholesaleOrders = monthlyOrders.filter((o) => o.sales_channel === 'wholesale');
+  const shopifyOrders = monthlyOrders.filter((o) => o.channel === 'shopify');
+  const wholesaleOrders = monthlyOrders.filter((o) => o.channel === 'wholesale');
 
   const shopifyRevenue = shopifyOrders.reduce((sum, o) => sum + o.total_amount, 0);
   const wholesaleRevenue = wholesaleOrders.reduce((sum, o) => sum + o.total_amount, 0);
@@ -64,15 +70,30 @@ export default function FinancialHealthModule() {
   const shopifyPercentage = totalRevenue > 0 ? (shopifyRevenue / totalRevenue) * 100 : 0;
   const wholesalePercentage = totalRevenue > 0 ? (wholesaleRevenue / totalRevenue) * 100 : 0;
 
-  const overdueReceivables = receivables.filter((r) => r.days_overdue > 0);
   const criticalReceivables = receivables.filter((r) => r.days_overdue > 30);
 
-  const topCustomers = customers
+  const topCustomers: TopCustomer[] = customers
     .map((customer) => {
-      const customerOrders = orders.filter((o) => o.customer_id === customer.id);
-      const totalSpent = customerOrders.reduce((sum, o) => sum + o.total_amount, 0);
-      const totalUnits = customerOrders.reduce((sum, o) => sum + o.total_items, 0);
-      return { ...customer, totalSpent, totalUnits, orderCount: customerOrders.length };
+      const ordersForCustomer = customerOrders.filter((order) => order.customer_id === customer.id);
+      const receivablesForCustomer = receivables.filter((receivable) => receivable.customer_id === customer.id);
+      const totalSpent = ordersForCustomer.reduce((sum, order) => sum + order.total_amount, 0);
+      const totalUnits = ordersForCustomer.reduce(
+        (sum, order) =>
+          sum + order.items.reduce((itemsSum, item) => itemsSum + (item.quantity || 0), 0),
+        0
+      );
+
+      const paymentScore = receivablesForCustomer.length > 0
+        ? receivablesForCustomer.sort((a, b) => b.created_at.localeCompare(a.created_at))[0].payment_score
+        : null;
+
+      return {
+        ...customer,
+        totalSpent,
+        totalUnits,
+        orderCount: ordersForCustomer.length,
+        paymentScore,
+      };
     })
     .sort((a, b) => b.totalSpent - a.totalSpent)
     .slice(0, 5);
@@ -223,14 +244,14 @@ export default function FinancialHealthModule() {
                     <div className="text-xs text-slate-400">{customer.totalUnits} unidades</div>
                   </div>
                 </div>
-                {customer.payment_score && (
+                {customer.paymentScore && (
                   <div className="mt-2">
                     <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                      customer.payment_score === 'A' ? 'bg-green-100 text-green-800' :
-                      customer.payment_score === 'B' ? 'bg-yellow-100 text-yellow-800' :
+                      customer.paymentScore === 'A' ? 'bg-green-100 text-green-800' :
+                      customer.paymentScore === 'B' ? 'bg-yellow-100 text-yellow-800' :
                       'bg-red-100 text-red-800'
                     }`}>
-                      Score: {customer.payment_score}
+                      Score: {customer.paymentScore}
                     </span>
                   </div>
                 )}

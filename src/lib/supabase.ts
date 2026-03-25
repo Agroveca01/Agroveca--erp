@@ -9,10 +9,24 @@ if (!supabaseUrl || !supabaseDefaultKey) {
 
 export const supabase = createClient(supabaseUrl, supabaseDefaultKey);
 
+export type CanonicalUserRole = 'admin' | 'operario' | 'vendedor';
+export type LegacyUserRole = 'operator' | 'ADMIN' | 'OPERARIO' | 'VENTAS';
+export type UserRoleValue = CanonicalUserRole | LegacyUserRole;
+
+export type RawMaterialCategory =
+  | 'chemical'
+  | 'natural'
+  | 'base'
+  | 'fragrance'
+  | 'colorant'
+  | 'substrate_component';
+
+export type ProductType = 'concentrado' | 'sustrato' | 'rtu-gatillo';
+
 export interface RawMaterial {
   id: string;
   name: string;
-  category: string;
+  category: RawMaterialCategory;
   unit: string;
   current_cost: number;
   stock_quantity: number;
@@ -34,7 +48,7 @@ export interface Product {
   name: string;
   product_id: string;
   format: string;
-  product_type: string;
+  product_type: ProductType;
   color: string | null;
   aroma: string | null;
   ph_target: number | null;
@@ -82,6 +96,42 @@ export interface SalesOrder {
   products?: Product;
 }
 
+export interface Customer {
+  id: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  address: string | null;
+  total_purchases: number;
+  total_spent: number;
+  loyalty_tier: number;
+  reward_count: number;
+  last_purchase_date: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CustomerOrderItem {
+  product_id?: string;
+  name?: string;
+  quantity?: number;
+  unit_price?: number;
+  sku?: string;
+}
+
+export interface CustomerOrder {
+  id: string;
+  customer_id: string;
+  order_number: string;
+  order_date: string;
+  total_amount: number;
+  items: CustomerOrderItem[];
+  status: string;
+  reward_eligible: boolean;
+  reward_included: boolean;
+  created_at: string;
+}
+
 export interface BusinessConfig {
   id: string;
   company_name: string;
@@ -99,12 +149,46 @@ export enum UserProfileRole {
   Operario = 'operario'
 }
 
+export function normalizeUserRole(role?: string | null): CanonicalUserRole | null {
+  if (!role) return null;
+
+  const normalizedRole = role.toLowerCase();
+
+  switch (normalizedRole) {
+    case UserProfileRole.Admin:
+      return UserProfileRole.Admin;
+    case UserProfileRole.Operario:
+    case 'operator':
+      return UserProfileRole.Operario;
+    case UserProfileRole.Vendedor:
+    case 'ventas':
+      return UserProfileRole.Vendedor;
+    default:
+      return null;
+  }
+}
+
+export function getUserRoleLabel(role?: string | null): string {
+  const normalizedRole = normalizeUserRole(role);
+
+  switch (normalizedRole) {
+    case UserProfileRole.Admin:
+      return 'Administrador';
+    case UserProfileRole.Operario:
+      return 'Operario';
+    case UserProfileRole.Vendedor:
+      return 'Vendedor';
+    default:
+      return 'Usuario';
+  }
+}
+
 export interface UserProfile {
   id: string;
   user_id: string;
   email: string;
   full_name: string | null;
-  role?: UserProfileRole | null;
+  role?: UserRoleValue | null;
   phone: string | null;
   is_active: boolean;
   created_at: string;

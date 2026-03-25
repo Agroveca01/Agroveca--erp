@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ShoppingCart, Plus, TrendingDown, Package, DollarSign, CheckCircle } from 'lucide-react';
+import { Plus, TrendingDown, Package, DollarSign, CheckCircle } from 'lucide-react';
 import { supabase, Purchase, PackagingInventory } from '../lib/supabase';
 import { calculateNetFromGross } from '../lib/taxUtils';
 
@@ -69,7 +69,6 @@ export default function PurchasesModule() {
 
       if (error) throw error;
 
-      const inventoryKey = `${formData.item_type}-${formData.item_name}-${formData.format}`;
       const existingItem = packagingInventory.find(
         (item) =>
           item.item_type === formData.item_type &&

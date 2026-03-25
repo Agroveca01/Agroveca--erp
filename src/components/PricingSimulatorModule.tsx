@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { TrendingUp, DollarSign, Users, ShoppingCart, AlertCircle, CheckCircle, Package, ShieldAlert } from 'lucide-react';
+import { TrendingUp, DollarSign, Users, ShoppingCart, AlertCircle, Package, ShieldAlert } from 'lucide-react';
 import { supabase, Product, FixedCostsConfig } from '../lib/supabase';
 
 interface FormatCosts {
@@ -92,7 +92,6 @@ const getVolumeDiscount = (quantity: number): VolumeDiscount => {
 export default function PricingSimulatorModule() {
   const [products, setProducts] = useState<Product[]>([]);
   const [pricingAnalysis, setPricingAnalysis] = useState<PricingAnalysis[]>([]);
-  const [fixedCosts, setFixedCosts] = useState<FixedCostsConfig | null>(null);
   const [loading, setLoading] = useState(true);
   const [ourMarginTarget, setOurMarginTarget] = useState(50);
   const [distributorMarginTarget, setDistributorMarginTarget] = useState(35);
@@ -118,7 +117,6 @@ export default function PricingSimulatorModule() {
       const costs = costsData.data;
 
       setProducts(prods);
-      setFixedCosts(costs);
 
       if (prods.length > 0 && !selectedProduct) {
         setSelectedProduct(prods[0].id);
@@ -217,34 +215,6 @@ export default function PricingSimulatorModule() {
 
   const formatPercent = (value: number) => {
     return `${value.toFixed(1)}%`;
-  };
-
-  const getDifferenceColor = (percent: number) => {
-    const absPercent = Math.abs(percent);
-    if (absPercent <= 10) return 'text-emerald-600';
-    if (absPercent <= 25) return 'text-yellow-600';
-    return 'text-red-600';
-  };
-
-  const getDifferenceBgColor = (percent: number) => {
-    const absPercent = Math.abs(percent);
-    if (absPercent <= 10) return 'bg-emerald-50';
-    if (absPercent <= 25) return 'bg-yellow-50';
-    return 'bg-red-50';
-  };
-
-  const getDifferenceBorderColor = (percent: number) => {
-    const absPercent = Math.abs(percent);
-    if (absPercent <= 10) return 'border-emerald-200';
-    if (absPercent <= 25) return 'border-yellow-200';
-    return 'border-red-200';
-  };
-
-  const getDifferenceLabel = (percent: number) => {
-    const absPercent = Math.abs(percent);
-    if (absPercent <= 10) return 'Alineado';
-    if (absPercent <= 25) return 'Revisar';
-    return 'Ajuste Crítico';
   };
 
   const currentDiscount = getVolumeDiscount(orderQuantity);

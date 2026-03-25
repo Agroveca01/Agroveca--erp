@@ -6,7 +6,7 @@ export function generateProductDataSheet(product: Product): void {
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Ficha Técnica - ${product.product_name}</title>
+  <title>Ficha Técnica - ${product.name}</title>
   <style>
     @page { size: A4; margin: 2cm; }
     body {
@@ -144,7 +144,7 @@ export function generateProductDataSheet(product: Product): void {
     <div style="color: #6b7280;">Productos Naturales para el Cuidado de Plantas</div>
   </div>
 
-  <div class="product-name">${product.product_name}</div>
+  <div class="product-name">${product.name}</div>
   <div class="format">${product.format}</div>
 
   <div class="specs">

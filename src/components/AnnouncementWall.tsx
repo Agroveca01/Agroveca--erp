@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Bell, AlertTriangle, Info, CheckCircle, Plus, X } from 'lucide-react';
-import { supabase, SystemAnnouncement, AnnouncementRead, UserProfileRole } from '../lib/supabase';
+import { supabase, SystemAnnouncement } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function AnnouncementWall() {
-  const { user, profile } = useAuth();
+  const { user, isAdmin } = useAuth();
   const [announcements, setAnnouncements] = useState<SystemAnnouncement[]>([]);
   const [reads, setReads] = useState<Set<string>>(new Set());
   const [showForm, setShowForm] = useState(false);
@@ -34,7 +34,7 @@ export default function AnnouncementWall() {
       ]);
 
       setAnnouncements(announcementsData.data || []);
-      setReads(new Set(readsData.data?.map((r: AnnouncementRead) => r.announcement_id) || []));
+      setReads(new Set(readsData.data?.map((r: { announcement_id: string }) => r.announcement_id) || []));
     } catch (error) {
       console.error('Error loading announcements:', error);
     }
@@ -128,7 +128,7 @@ export default function AnnouncementWall() {
             )}
           </div>
         </div>
-        {profile?.role === UserProfileRole.Admin && (
+        {isAdmin && (
           <button
             onClick={() => setShowForm(!showForm)}
             className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-cyan-600 to-blue-600 text-white rounded-lg hover:shadow-lg transition-all font-semibold"
@@ -264,7 +264,7 @@ export default function AnnouncementWall() {
                       <CheckCircle className="w-4 h-4" />
                     </button>
                   )}
-                  {profile?.role === UserProfileRole.Admin && (
+                  {isAdmin && (
                     <button
                       onClick={() => deleteAnnouncement(announcement.id)}
                       className="p-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"

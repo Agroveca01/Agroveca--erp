@@ -454,7 +454,7 @@ export default function CRMModule() {
           </div>
           <div className="space-y-3">
             {topCustomers.map((customer, index) => {
-              const { leaves, config } = getLoyaltyIcon(customer.loyalty_tier, customer.order_count);
+              const { leaves } = getLoyaltyIcon(customer.loyalty_tier, customer.order_count);
               return (
                 <div
                   key={customer.id}
@@ -624,7 +624,7 @@ export default function CRMModule() {
                   <h4 className="text-lg font-bold text-white">Historial de Pedidos</h4>
                 </div>
                 <div className="space-y-3">
-                  {customerOrders.map((order, index) => (
+                  {customerOrders.map((order) => (
                     <div
                       key={order.id}
                       className={`rounded-lg p-4 border ${order.is_vip_milestone

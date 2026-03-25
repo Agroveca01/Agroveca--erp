@@ -6,7 +6,6 @@ export default function ProductionSheetModule() {
   const [products, setProducts] = useState<Product[]>([]);
   const [inventory, setInventory] = useState<PackagingInventory[]>([]);
   const [orders, setOrders] = useState<ProductionOrder[]>([]);
-  const [loading, setLoading] = useState(true);
 
   const [selectedProduct, setSelectedProduct] = useState('');
   const [targetUnits, setTargetUnits] = useState(24);
@@ -17,7 +16,6 @@ export default function ProductionSheetModule() {
   }, []);
 
   const loadData = async () => {
-    setLoading(true);
     try {
       const [productsData, inventoryData, ordersData] = await Promise.all([
         supabase.from('products').select('*').order('name'),
@@ -30,8 +28,6 @@ export default function ProductionSheetModule() {
       setOrders(ordersData.data || []);
     } catch (error) {
       console.error('Error loading data:', error);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -101,7 +97,7 @@ export default function ProductionSheetModule() {
     try {
       const orderNumber = `PROD-${Date.now()}`;
 
-      const { data: order, error } = await supabase
+      const { error } = await supabase
         .from('production_orders')
         .insert([
           {
@@ -205,7 +201,6 @@ export default function ProductionSheetModule() {
       await supabase.from('production_batches').insert([
         {
           product_id: product.id,
-          product_name: product.product_name || product.name,
           format: product.format,
           quantity_produced: successfulUnits,
           production_date: new Date().toISOString(),

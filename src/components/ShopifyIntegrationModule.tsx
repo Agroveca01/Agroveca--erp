@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { ShoppingBag, Settings, RefreshCw, CheckCircle, XCircle, AlertCircle, DollarSign, Package, TrendingUp } from 'lucide-react';
-import { supabase, UserProfileRole } from '../lib/supabase';
+import { ShoppingBag, Settings, RefreshCw, CheckCircle, XCircle, AlertCircle, DollarSign, TrendingUp } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 
 interface ShopifyConfig {
@@ -36,7 +36,7 @@ interface ShopifyOrder {
 }
 
 export default function ShopifyIntegrationModule() {
-  const { profile } = useAuth();
+  const { isAdmin } = useAuth();
   const [config, setConfig] = useState<ShopifyConfig | null>(null);
   const [loading, setLoading] = useState(true);
   const [syncLogs, setSyncLogs] = useState<SyncLog[]>([]);
@@ -225,7 +225,7 @@ export default function ShopifyIntegrationModule() {
     }).format(amount);
   };
 
-  if (!profile?.role || profile.role !== UserProfileRole.Admin) {
+  if (!isAdmin) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-center">

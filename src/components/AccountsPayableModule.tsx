@@ -4,14 +4,12 @@ import { supabase, AccountsPayable } from '../lib/supabase';
 
 export default function AccountsPayableModule() {
   const [payables, setPayables] = useState<AccountsPayable[]>([]);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadPayables();
   }, []);
 
   const loadPayables = async () => {
-    setLoading(true);
     try {
       const { data } = await supabase
         .from('accounts_payable')
@@ -21,8 +19,6 @@ export default function AccountsPayableModule() {
       setPayables(data || []);
     } catch (error) {
       console.error('Error loading payables:', error);
-    } finally {
-      setLoading(false);
     }
   };
 

@@ -1,17 +1,13 @@
+import { getUserRoleLabel, UserRoleValue } from './supabase';
+
 export interface UserCredentials {
   full_name: string;
   email: string;
   password: string;
-  role: string;
+  role: UserRoleValue;
 }
 
 export const generateWelcomeMessage = (credentials: UserCredentials): string => {
-  const roleNames: Record<string, string> = {
-    admin: 'Administrador',
-    vendedor: 'Vendedor',
-    operario: 'Operario'
-  };
-
   return `🌱 *Bienvenido/a a CuidaTuPlanta ERP*
 
 ¡Hola ${credentials.full_name}!
@@ -20,7 +16,7 @@ Tu cuenta ha sido creada exitosamente. Aquí están tus credenciales de acceso:
 
 📧 *Email:* ${credentials.email}
 🔐 *Contraseña:* ${credentials.password}
-👤 *Rol:* ${roleNames[credentials.role] || credentials.role}
+👤 *Rol:* ${getUserRoleLabel(credentials.role)}
 
 🔗 *Accede al sistema aquí:*
 ${window.location.origin}

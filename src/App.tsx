@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Package, Factory, DollarSign, ShoppingCart, Settings, LayoutDashboard, Users, ClipboardList, LogOut, QrCode, ShoppingBag, TrendingUp, Truck, Calendar, Receipt, AlertTriangle, Beaker, FileText, CreditCard, Activity, Building, Award, BookOpen } from 'lucide-react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { getUserRoleLabel, normalizeUserRole } from './lib/supabase';
 import AuthModule from './components/AuthModule';
 import DashboardModule from './components/DashboardModule';
 import InventoryModule from './components/InventoryModule';
@@ -50,8 +51,8 @@ function AppContent() {
     return <AuthModule />;
   }
 
-  const getRolePermissions = (role: string): Module[] => {
-    const normalizedRole = role?.toLowerCase();
+  const getRolePermissions = (role?: string | null): Module[] => {
+    const normalizedRole = normalizeUserRole(role);
 
     if (normalizedRole === 'admin') {
       return ['dashboard', 'kpis', 'financial-health', 'fiscal', 'suppliers', 'invoices', 'payables', 'purchases', 'stock', 'production-sheet', 'inventory', 'production', 'costing', 'pricing', 'wholesale', 'sales', 'orders', 'crm', 'shopify', 'users', 'config'];
@@ -114,9 +115,9 @@ function AppContent() {
           <p className="text-sm font-semibold m-0 text-slate-200 truncate">
             {profile?.full_name || user.email}
           </p>
-          <p className="text-xs text-[#10b981] mt-1 uppercase font-medium">
-            {profile?.role || 'Usuario'}
-          </p>
+            <p className="text-xs text-[#10b981] mt-1 uppercase font-medium">
+              {getUserRoleLabel(profile?.role)}
+            </p>
         </div>
 
         {/* Navigation Menu - Simplified */}
@@ -184,9 +185,9 @@ function AppContent() {
                 Sistema ERP · Módulo: {activeTab}
               </p>
             </div>
-            <div className="px-5 py-2 bg-[#10b981] text-white rounded-full text-xs font-bold">
-              {profile?.role?.toUpperCase() || 'USUARIO'}
-            </div>
+              <div className="px-5 py-2 bg-[#10b981] text-white rounded-full text-xs font-bold">
+               {getUserRoleLabel(profile?.role).toUpperCase()}
+              </div>
           </div>
         </header>
 

@@ -1,30 +1,31 @@
 import { useState } from 'react';
-import { Book, X, User, Wrench, TrendingUp, Shield, CheckCircle, AlertCircle } from 'lucide-react';
+import { Book, X, Wrench, TrendingUp, Shield, CheckCircle, AlertCircle } from 'lucide-react';
+import { UserProfileRole } from '../lib/supabase';
 
 interface UserManualProps {
   onClose: () => void;
 }
 
 export default function UserManual({ onClose }: UserManualProps) {
-  const [activeRole, setActiveRole] = useState<'admin' | 'operario' | 'vendedor'>('admin');
+  const [activeRole, setActiveRole] = useState<UserProfileRole>(UserProfileRole.Admin);
 
   const roles = [
     {
-      id: 'admin' as const,
+        id: UserProfileRole.Admin,
       name: 'Administrador',
       icon: Shield,
       color: 'from-purple-600 to-indigo-600',
       description: 'Control total del sistema ERP',
     },
     {
-      id: 'operario' as const,
+        id: UserProfileRole.Operario,
       name: 'Operario',
       icon: Wrench,
       color: 'from-blue-600 to-cyan-600',
       description: 'Gestión de producción e inventario',
     },
     {
-      id: 'vendedor' as const,
+        id: UserProfileRole.Vendedor,
       name: 'Vendedor',
       icon: TrendingUp,
       color: 'from-[#10b981] to-[#10b981]',
@@ -33,7 +34,7 @@ export default function UserManual({ onClose }: UserManualProps) {
   ];
 
   const roleContent = {
-    admin: {
+    [UserProfileRole.Admin]: {
       responsibilities: [
         'Gestión completa de finanzas y contabilidad',
         'Administración de usuarios y permisos',
@@ -75,7 +76,7 @@ export default function UserManual({ onClose }: UserManualProps) {
         'Aprobar descuentos especiales a distribuidores',
       ],
     },
-    operario: {
+    [UserProfileRole.Operario]: {
       responsibilities: [
         'Ejecución de producción diaria',
         'Control de calidad (pH, filtrado)',
@@ -101,7 +102,7 @@ export default function UserManual({ onClose }: UserManualProps) {
         'Verificar pH y calidad antes de envasar',
       ],
     },
-    vendedor: {
+    [UserProfileRole.Vendedor]: {
       responsibilities: [
         'Gestión de ventas y cobranzas',
         'Atención a distribuidores',

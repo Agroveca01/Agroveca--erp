@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Users, Mail, Calendar, Plus, X, Phone, Lock, CircleUser as UserCircle, Shield, Send, Copy, CheckCircle } from 'lucide-react';
-import { supabase, UserProfile } from '../lib/supabase';
+import { supabase, getUserRoleLabel, UserProfile, UserProfileRole } from '../lib/supabase';
 import { generateWelcomeMessage, copyMessageToClipboard, sendMessageViaWhatsApp } from '../lib/messageUtils';
 
 interface NewUserForm {
@@ -8,14 +8,14 @@ interface NewUserForm {
   email: string;
   password: string;
   phone: string;
-  role: 'admin' | 'vendedor' | 'operario';
+  role: UserProfileRole;
 }
 
 interface WelcomeCredentials {
   full_name: string;
   email: string;
   password: string;
-  role: string;
+  role: UserProfileRole;
 }
 
 export default function UserManagementModule() {
@@ -32,7 +32,7 @@ export default function UserManagementModule() {
     email: '',
     password: '',
     phone: '',
-    role: 'operario'
+    role: UserProfileRole.Operario
   });
 
   useEffect(() => {
@@ -68,6 +68,8 @@ export default function UserManagementModule() {
       setSaving(true);
       setError(null);
 
+      const normalizedRole = formData.role;
+
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
@@ -75,7 +77,7 @@ export default function UserManagementModule() {
           data: {
             full_name: formData.full_name,
             phone: formData.phone,
-            role: formData.role
+            role: normalizedRole
           }
         }
       });
@@ -100,7 +102,7 @@ export default function UserManagementModule() {
           full_name: formData.full_name,
           email: formData.email,
           password: formData.password,
-          role: formData.role
+          role: normalizedRole
         });
         setShowWelcomeModal(true);
 
@@ -109,7 +111,7 @@ export default function UserManagementModule() {
           email: '',
           password: '',
           phone: '',
-          role: 'operario'
+          role: UserProfileRole.Operario
         });
         setShowForm(false);
 
@@ -142,14 +144,14 @@ export default function UserManagementModule() {
 
   const getRoleInfo = (role: string) => {
     switch (role) {
-      case 'admin':
+      case UserProfileRole.Admin:
         return { label: 'Admin', desc: 'Acceso total', color: 'bg-purple-100 text-purple-800' };
-      case 'vendedor':
+      case UserProfileRole.Vendedor:
         return { label: 'Vendedor', desc: 'CRM/Simulador', color: 'bg-blue-100 text-blue-800' };
-      case 'operario':
+      case UserProfileRole.Operario:
         return { label: 'Operario', desc: 'Producción/Inventario', color: 'bg-[#10b981]/10 text-[#10b981]' };
       default:
-        return { label: role, desc: 'Usuario', color: 'bg-gray-100 text-gray-800' };
+        return { label: getUserRoleLabel(role), desc: 'Usuario', color: 'bg-gray-100 text-gray-800' };
     }
   };
 
@@ -272,9 +274,9 @@ export default function UserManagementModule() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <button
                   type="button"
-                  onClick={() => setFormData({ ...formData, role: 'admin' })}
+                  onClick={() => setFormData({ ...formData, role: UserProfileRole.Admin })}
                   className={`p-4 rounded-lg border-2 transition-all ${
-                    formData.role === 'admin'
+                    formData.role === UserProfileRole.Admin
                       ? 'border-purple-500 bg-purple-500/10'
                       : 'border-[#30363d] bg-[#0d1117] hover:border-purple-500/50'
                   }`}
@@ -286,9 +288,9 @@ export default function UserManagementModule() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setFormData({ ...formData, role: 'vendedor' })}
+                  onClick={() => setFormData({ ...formData, role: UserProfileRole.Vendedor })}
                   className={`p-4 rounded-lg border-2 transition-all ${
-                    formData.role === 'vendedor'
+                    formData.role === UserProfileRole.Vendedor
                       ? 'border-blue-500 bg-blue-500/10'
                       : 'border-[#30363d] bg-[#0d1117] hover:border-blue-500/50'
                   }`}
@@ -300,9 +302,9 @@ export default function UserManagementModule() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setFormData({ ...formData, role: 'operario' })}
+                  onClick={() => setFormData({ ...formData, role: UserProfileRole.Operario })}
                   className={`p-4 rounded-lg border-2 transition-all ${
-                    formData.role === 'operario'
+                    formData.role === UserProfileRole.Operario
                       ? 'border-[#10b981] bg-[#10b981]/10'
                       : 'border-[#30363d] bg-[#0d1117] hover:border-[#10b981]/50'
                   }`}

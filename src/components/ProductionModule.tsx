@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { FlaskConical, Plus, Eye, Calendar, CreditCard as Edit, Trash2, X } from 'lucide-react';
+import { FlaskConical, Plus, Calendar, CreditCard as Edit, Trash2, X } from 'lucide-react';
 import { supabase, Product, ProductRecipe, ProductionBatch, RawMaterial } from '../lib/supabase';
 
 export default function ProductionModule() {
@@ -235,7 +235,7 @@ export default function ProductionModule() {
     }
   };
 
-  const deleteProduct = async (productId: number, productName: string) => {
+  const deleteProduct = async (productId: string, productName: string) => {
     if (!confirm(`¿Estás seguro de eliminar el producto "${productName}"? Esta acción no se puede deshacer y eliminará también su receta y lotes de producción.`)) {
       return;
     }
@@ -248,7 +248,7 @@ export default function ProductionModule() {
 
       if (error) throw error;
 
-      if (selectedProduct?.id === productId) {
+        if (selectedProduct?.id === productId) {
         setSelectedProduct(null);
         setRecipes([]);
       }

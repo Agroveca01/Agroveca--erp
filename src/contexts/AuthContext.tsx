@@ -1,12 +1,16 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
-import { supabase, UserProfile } from '../lib/supabase';
+import { CanonicalUserRole, normalizeUserRole, supabase, UserProfile, UserProfileRole } from '../lib/supabase';
 
 interface AuthContextType {
   user: User | null;
   profile: UserProfile | null;
   session: Session | null;
   loading: boolean;
+  normalizedRole: CanonicalUserRole | null;
+  isAdmin: boolean;
+  isOperator: boolean;
+  isSeller: boolean;
   isPasswordRecovery: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: Error | null }>;
@@ -151,11 +155,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await supabase.auth.signOut();
   };
 
+  const normalizedRole = normalizeUserRole(profile?.role);
+
   const value = {
     user,
     profile,
     session,
     loading,
+    normalizedRole,
+    isAdmin: normalizedRole === UserProfileRole.Admin,
+    isOperator: normalizedRole === UserProfileRole.Operario,
+    isSeller: normalizedRole === UserProfileRole.Vendedor,
     isPasswordRecovery,
     signIn,
     signUp,

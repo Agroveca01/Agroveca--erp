@@ -4,10 +4,9 @@ import { supabase, WeeklyKPI, ActivityLog } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function WeeklyKPIModule() {
-  const { user, profile } = useAuth();
+  const { user } = useAuth();
   const [kpis, setKpis] = useState<WeeklyKPI[]>([]);
   const [activities, setActivities] = useState<ActivityLog[]>([]);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (user) {
@@ -16,7 +15,6 @@ export default function WeeklyKPIModule() {
   }, [user]);
 
   const loadData = async () => {
-    setLoading(true);
     try {
       const weekStart = getWeekStart(new Date());
       const weekEnd = getWeekEnd(new Date());
@@ -40,8 +38,6 @@ export default function WeeklyKPIModule() {
       setActivities(activitiesData.data || []);
     } catch (error) {
       console.error('Error loading KPIs:', error);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -160,7 +156,7 @@ export default function WeeklyKPIModule() {
         </div>
 
         <div className="space-y-4">
-          {topPerformers.map((kpi, index) => (
+          {topPerformers.map((kpi) => (
             <div
               key={kpi.id}
               className={`bg-gradient-to-r ${getMedalColor(kpi.medal)} rounded-xl p-6 border-2 border-white/10`}

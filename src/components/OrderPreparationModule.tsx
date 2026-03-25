@@ -116,13 +116,6 @@ export default function OrderPreparationModule() {
     setShowThankYouCard(true);
   };
 
-  const autoPrintVIPOrder = (order: Order) => {
-    openVIPLabel(order);
-    setTimeout(() => {
-      window.print();
-    }, 500);
-  };
-
   const getStatusBadge = (status: string) => {
     const badges = {
       pending: { color: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30', label: 'Pendiente' },

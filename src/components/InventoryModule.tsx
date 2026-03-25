@@ -1,7 +1,25 @@
 import { useState, useEffect } from 'react';
 import { AlertCircle, Plus, CreditCard as Edit, Trash2, Package2, Beaker, X, Search } from 'lucide-react';
-import { supabase, RawMaterial, Product } from '../lib/supabase';
+import { Product, ProductType, RawMaterial, RawMaterialCategory, supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+
+const DEFAULT_RAW_MATERIAL_FORM = {
+  name: '',
+  category: 'chemical' as RawMaterialCategory,
+  unit: 'kg',
+  stock_quantity: 0,
+  min_stock_alert: 0,
+  current_cost: 0,
+};
+
+const DEFAULT_PRODUCT_FORM = {
+  product_id: '',
+  name: '',
+  product_type: 'concentrado' as ProductType,
+  format: '',
+  color: '#94a3b8',
+  base_price: 0,
+};
 
 export default function InventoryModule() {
   const { isOperator } = useAuth();
@@ -13,22 +31,8 @@ export default function InventoryModule() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingItem, setEditingItem] = useState<RawMaterial | Product | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [rawMaterialForm, setRawMaterialForm] = useState({
-    name: '',
-    category: 'chemical' as 'chemical' | 'natural' | 'base' | 'fragrance' | 'colorant' | 'substrate_component',
-    unit: 'kg',
-    stock_quantity: 0,
-    min_stock_alert: 0,
-    current_cost: 0,
-  });
-  const [productForm, setProductForm] = useState({
-    product_id: '',
-    name: '',
-    product_type: 'concentrado' as 'concentrado' | 'sustrato' | 'rtu-gatillo',
-    format: '',
-    color: '#94a3b8',
-    base_price: 0,
-  });
+  const [rawMaterialForm, setRawMaterialForm] = useState(DEFAULT_RAW_MATERIAL_FORM);
+  const [productForm, setProductForm] = useState(DEFAULT_PRODUCT_FORM);
 
   useEffect(() => {
     loadData();
@@ -127,14 +131,7 @@ export default function InventoryModule() {
       if (error) throw error;
 
       setShowAddModal(false);
-      setRawMaterialForm({
-        name: '',
-        category: 'chemical',
-        unit: 'kg',
-        stock_quantity: 0,
-        min_stock_alert: 0,
-        current_cost: 0,
-      });
+      setRawMaterialForm(DEFAULT_RAW_MATERIAL_FORM);
       loadData();
       alert('Materia prima agregada exitosamente');
     } catch (error) {
@@ -164,14 +161,7 @@ export default function InventoryModule() {
       if (error) throw error;
 
       setShowAddModal(false);
-      setProductForm({
-        product_id: '',
-        name: '',
-        product_type: 'concentrado',
-        format: '',
-        color: '#94a3b8',
-        base_price: 0,
-      });
+      setProductForm(DEFAULT_PRODUCT_FORM);
       loadData();
       alert('Producto agregado exitosamente');
     } catch (error) {
@@ -228,14 +218,7 @@ export default function InventoryModule() {
 
       setShowEditModal(false);
       setEditingItem(null);
-      setRawMaterialForm({
-        name: '',
-        category: 'chemical',
-        unit: 'kg',
-        stock_quantity: 0,
-        min_stock_alert: 0,
-        current_cost: 0,
-      });
+      setRawMaterialForm(DEFAULT_RAW_MATERIAL_FORM);
       loadData();
       alert('Materia prima actualizada. Costos de productos recalculados automáticamente.');
     } catch (error) {
@@ -263,14 +246,7 @@ export default function InventoryModule() {
 
       setShowEditModal(false);
       setEditingItem(null);
-      setProductForm({
-        product_id: '',
-        name: '',
-        product_type: 'concentrado',
-        format: '',
-        color: '#94a3b8',
-        base_price: 0,
-      });
+      setProductForm(DEFAULT_PRODUCT_FORM);
       loadData();
       alert('Producto actualizado exitosamente');
     } catch (error) {
@@ -622,7 +598,7 @@ export default function InventoryModule() {
                   </label>
                   <select
                     value={rawMaterialForm.category}
-                    onChange={(e) => setRawMaterialForm({ ...rawMaterialForm, category: e.target.value as any })}
+                    onChange={(e) => setRawMaterialForm({ ...rawMaterialForm, category: e.target.value as RawMaterialCategory })}
                     className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                   >
                     <option value="chemical">Chemical</option>
@@ -744,13 +720,14 @@ export default function InventoryModule() {
                       Tipo
                     </label>
                     <select
-                      value={productForm.product_type}
-                      onChange={(e) => setProductForm({ ...productForm, product_type: e.target.value as any })}
-                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                    >
-                      <option value="concentrado">Concentrado</option>
-                      <option value="sustrato">Sustrato</option>
-                    </select>
+                    value={productForm.product_type}
+                    onChange={(e) => setProductForm({ ...productForm, product_type: e.target.value as ProductType })}
+                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  >
+                    <option value="concentrado">Concentrado</option>
+                    <option value="sustrato">Sustrato</option>
+                    <option value="rtu-gatillo">RTU Gatillo</option>
+                  </select>
                   </div>
 
                   <div>
@@ -810,22 +787,8 @@ export default function InventoryModule() {
               <button
                 onClick={() => {
                   setShowAddModal(false);
-                  setRawMaterialForm({
-                    name: '',
-                    category: 'chemical',
-                    unit: 'kg',
-                    stock_quantity: 0,
-                    min_stock_alert: 0,
-                    current_cost: 0,
-                  });
-                  setProductForm({
-                    product_id: '',
-                    name: '',
-                    product_type: 'concentrado',
-                    format: '',
-                    color: '#94a3b8',
-                    base_price: 0,
-                  });
+                  setRawMaterialForm(DEFAULT_RAW_MATERIAL_FORM);
+                  setProductForm(DEFAULT_PRODUCT_FORM);
                 }}
                 className="flex-1 px-4 py-2 border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50 transition-colors"
               >
@@ -881,7 +844,7 @@ export default function InventoryModule() {
                   </label>
                   <select
                     value={rawMaterialForm.category}
-                    onChange={(e) => setRawMaterialForm({ ...rawMaterialForm, category: e.target.value as any })}
+                    onChange={(e) => setRawMaterialForm({ ...rawMaterialForm, category: e.target.value as RawMaterialCategory })}
                     className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                   >
                     <option value="chemical">Chemical</option>
@@ -992,14 +955,15 @@ export default function InventoryModule() {
                     <label className="block text-sm font-medium text-slate-700 mb-2">
                       Tipo
                     </label>
-                    <select
-                      value={productForm.product_type}
-                      onChange={(e) => setProductForm({ ...productForm, product_type: e.target.value as any })}
-                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                    >
-                      <option value="concentrado">Concentrado</option>
-                      <option value="sustrato">Sustrato</option>
-                    </select>
+                  <select
+                    value={productForm.product_type}
+                    onChange={(e) => setProductForm({ ...productForm, product_type: e.target.value as ProductType })}
+                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  >
+                    <option value="concentrado">Concentrado</option>
+                    <option value="sustrato">Sustrato</option>
+                    <option value="rtu-gatillo">RTU Gatillo</option>
+                  </select>
                   </div>
 
                   <div>

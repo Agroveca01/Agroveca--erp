@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Package, TrendingUp, DollarSign, Target, Award, Truck, Calculator, AlertTriangle, FileText, CheckCircle, Receipt } from 'lucide-react';
+import { Package, TrendingUp, DollarSign, Target, Truck, Calculator, AlertTriangle, FileText, CheckCircle, Receipt } from 'lucide-react';
 import { supabase, Product, FormatCost, FixedCostsConfig } from '../lib/supabase';
-import { calculateNetFromGross, calculateMarginOnNet, IVA_RATE, formatVATPercentage } from '../lib/taxUtils';
+import { calculateNetFromGross, IVA_RATE, formatVATPercentage } from '../lib/taxUtils';
 
 interface ProductCostBreakdown {
   product: Product;
@@ -49,8 +49,6 @@ interface Quotation {
 
 export default function WholesaleDistributionModule() {
   const [products, setProducts] = useState<Product[]>([]);
-  const [formatCosts, setFormatCosts] = useState<FormatCost[]>([]);
-  const [fixedCosts, setFixedCosts] = useState<FixedCostsConfig | null>(null);
   const [productCosts, setProductCosts] = useState<ProductCostBreakdown[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -88,8 +86,6 @@ export default function WholesaleDistributionModule() {
       const costs = fixedCostsData.data;
 
       setProducts(prods);
-      setFormatCosts(formats);
-      setFixedCosts(costs);
 
       await calculateProductCosts(prods, formats, costs);
     } catch (error) {
@@ -284,10 +280,6 @@ export default function WholesaleDistributionModule() {
       currency: 'CLP',
       minimumFractionDigits: 0,
     }).format(amount);
-  };
-
-  const formatPercent = (value: number) => {
-    return `${value.toFixed(1)}%`;
   };
 
   return (

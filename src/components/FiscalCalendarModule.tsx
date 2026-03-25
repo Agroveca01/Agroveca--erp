@@ -1,13 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Calendar, AlertTriangle, DollarSign, CheckCircle, Clock, TrendingUp, Receipt, Calculator } from 'lucide-react';
 import { supabase, FiscalConfig, SalesOrder } from '../lib/supabase';
-import { calculateNetFromGross, formatVATPercentage } from '../lib/taxUtils';
+import { calculateNetFromGross } from '../lib/taxUtils';
 
 export default function FiscalCalendarModule() {
   const [fiscalConfig, setFiscalConfig] = useState<FiscalConfig | null>(null);
   const [orders, setOrders] = useState<SalesOrder[]>([]);
   const [purchases, setPurchases] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const [ppmPercentage, setPpmPercentage] = useState(1.0);
   const [withdrawalAmount, setWithdrawalAmount] = useState(0);
 
@@ -16,7 +15,6 @@ export default function FiscalCalendarModule() {
   }, []);
 
   const loadFiscalData = async () => {
-    setLoading(true);
     try {
       const [configData, ordersData, purchasesData] = await Promise.all([
         supabase.from('fiscal_config').select('*').limit(1).maybeSingle(),
@@ -32,8 +30,6 @@ export default function FiscalCalendarModule() {
       setPurchases(purchasesData.data || []);
     } catch (error) {
       console.error('Error loading fiscal data:', error);
-    } finally {
-      setLoading(false);
     }
   };
 

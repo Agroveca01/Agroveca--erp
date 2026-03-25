@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { TrendingUp, Calculator, Target, Settings, Save, AlertTriangle, CreditCard as Edit2, Check, X } from 'lucide-react';
-import { supabase, Product, ProductRecipe, BusinessConfig, FixedCostsConfig, FormatCost } from '../lib/supabase';
+import { TrendingUp, Settings, Save, AlertTriangle, CreditCard as Edit2, X } from 'lucide-react';
+import { supabase, Product, BusinessConfig, FixedCostsConfig, FormatCost } from '../lib/supabase';
 
 interface ProductCostAnalysis {
   product: Product;
@@ -250,7 +250,7 @@ export default function CostingModule() {
 
   const handleSaveAllChanges = async () => {
     try {
-      const updatePromises: Promise<any>[] = [];
+      const updatePromises = [];
 
       for (const [productId, data] of Object.entries(editableData)) {
         const product = products.find(p => p.id === productId);
