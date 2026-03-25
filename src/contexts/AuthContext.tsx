@@ -2,6 +2,30 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { CanonicalUserRole, normalizeUserRole, supabase, UserProfile, UserProfileRole } from '../lib/supabase';
 
+const isRecoveryUrl = () => {
+  if (typeof window === 'undefined') {
+    return false;
+  }
+
+  const hash = window.location.hash.startsWith('#')
+    ? window.location.hash.slice(1)
+    : window.location.hash;
+
+  if (!hash) {
+    return false;
+  }
+
+  return new URLSearchParams(hash).get('type') === 'recovery';
+};
+
+const clearRecoveryHash = () => {
+  if (typeof window === 'undefined' || !window.location.hash) {
+    return;
+  }
+
+  window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
+};
+
 interface AuthContextType {
   user: User | null;
   profile: UserProfile | null;
@@ -30,6 +54,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
 
   useEffect(() => {
+    setIsPasswordRecovery(isRecoveryUrl());
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
@@ -41,7 +67,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      setIsPasswordRecovery(event === 'PASSWORD_RECOVERY');
+      if (event === 'PASSWORD_RECOVERY' || isRecoveryUrl()) {
+        setIsPasswordRecovery(true);
+      } else if (event === 'SIGNED_OUT' || !session) {
+        setIsPasswordRecovery(false);
+      }
+
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
@@ -143,7 +174,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (error) return { error };
 
+      clearRecoveryHash();
       setIsPasswordRecovery(false);
+      await supabase.auth.signOut();
+
       return { error: null };
     } catch (error) {
       return { error: error as Error };
