@@ -12,6 +12,18 @@ interface InvoiceLineItem {
   packaging_inventory_id: string | null;
 }
 
+const EMPTY_LINE_ITEM: InvoiceLineItem = {
+  item_type: 'envase',
+  item_name: '',
+  format: '',
+  quantity: 0,
+  unit_price_net: 0,
+  line_total_net: 0,
+  packaging_inventory_id: null,
+};
+
+const normalizeFormat = (format: string | null | undefined) => format?.trim() || null;
+
 export default function InvoicesPurchaseModule() {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [inventory, setInventory] = useState<PackagingInventory[]>([]);
@@ -25,9 +37,7 @@ export default function InvoicesPurchaseModule() {
   const [creditDays, setCreditDays] = useState(30);
   const [notes, setNotes] = useState('');
 
-  const [lineItems, setLineItems] = useState<InvoiceLineItem[]>([
-    { item_type: 'envase', item_name: '', format: '', quantity: 0, unit_price_net: 0, line_total_net: 0, packaging_inventory_id: null },
-  ]);
+  const [lineItems, setLineItems] = useState<InvoiceLineItem[]>([EMPTY_LINE_ITEM]);
 
   useEffect(() => {
     loadData();
@@ -52,7 +62,7 @@ export default function InvoicesPurchaseModule() {
   const addLineItem = () => {
     setLineItems([
       ...lineItems,
-      { item_type: 'envase', item_name: '', format: '', quantity: 0, unit_price_net: 0, line_total_net: 0, packaging_inventory_id: null },
+      EMPTY_LINE_ITEM,
     ]);
   };
 
@@ -69,11 +79,12 @@ export default function InvoicesPurchaseModule() {
     }
 
     if (field === 'item_type' || field === 'item_name' || field === 'format') {
+      const normalizedLineFormat = normalizeFormat(newLineItems[index].format);
       const matchingInventory = inventory.find(
         (item) =>
           item.item_type === newLineItems[index].item_type &&
           item.item_name === newLineItems[index].item_name &&
-          item.format === newLineItems[index].format
+          normalizeFormat(item.format) === normalizedLineFormat
       );
       newLineItems[index].packaging_inventory_id = matchingInventory?.id || null;
     }
@@ -115,13 +126,81 @@ export default function InvoicesPurchaseModule() {
 
       if (invoiceError) throw invoiceError;
 
-      const itemsToInsert = lineItems
+      const inventoryResolvedItems: InvoiceLineItem[] = [];
+
+      for (const item of lineItems.filter((lineItem) => lineItem.quantity > 0)) {
+        const normalizedFormat = normalizeFormat(item.format);
+
+        let packagingInventoryId = item.packaging_inventory_id;
+        let existingItem = packagingInventoryId
+          ? inventory.find((inv) => inv.id === packagingInventoryId)
+          : inventory.find(
+              (inv) =>
+                inv.item_type === item.item_type &&
+                inv.item_name === item.item_name &&
+                normalizeFormat(inv.format) === normalizedFormat
+            );
+
+        if (!existingItem) {
+          const { data: newInventoryItem, error: inventoryInsertError } = await supabase
+            .from('packaging_inventory')
+            .insert([
+              {
+                item_type: item.item_type,
+                item_name: item.item_name,
+                format: normalizedFormat,
+                current_stock: item.quantity,
+                unit_cost_net: item.unit_price_net,
+              },
+            ])
+            .select()
+            .single();
+
+          if (inventoryInsertError) throw inventoryInsertError;
+
+          packagingInventoryId = newInventoryItem.id;
+          existingItem = newInventoryItem;
+        } else {
+          packagingInventoryId = existingItem.id;
+
+          const { error: inventoryUpdateError } = await supabase
+            .from('packaging_inventory')
+            .update({
+              current_stock: existingItem.current_stock + item.quantity,
+              unit_cost_net: item.unit_price_net,
+            })
+            .eq('id', existingItem.id);
+
+          if (inventoryUpdateError) throw inventoryUpdateError;
+        }
+
+        const { error: movementError } = await supabase.from('inventory_movements').insert([
+          {
+            packaging_inventory_id: packagingInventoryId,
+            movement_type: 'entrada',
+            quantity: item.quantity,
+            reference_id: invoice.id,
+            reference_type: 'purchase_invoice',
+            notes: `Factura ${invoiceNumber}`,
+          },
+        ]);
+
+        if (movementError) throw movementError;
+
+        inventoryResolvedItems.push({
+          ...item,
+          format: normalizedFormat || '',
+          packaging_inventory_id: packagingInventoryId,
+        });
+      }
+
+      const itemsToInsert = inventoryResolvedItems
         .filter((item) => item.quantity > 0)
         .map((item) => ({
           invoice_id: invoice.id,
           item_type: item.item_type,
           item_name: item.item_name,
-          format: item.format || null,
+          format: normalizeFormat(item.format),
           quantity: item.quantity,
           unit_price_net: item.unit_price_net,
           line_total_net: item.line_total_net,
@@ -129,30 +208,6 @@ export default function InvoicesPurchaseModule() {
         }));
 
       await supabase.from('purchase_invoice_items').insert(itemsToInsert);
-
-      for (const item of lineItems.filter((i) => i.quantity > 0 && i.packaging_inventory_id)) {
-        const existingItem = inventory.find((inv) => inv.id === item.packaging_inventory_id);
-        if (existingItem) {
-          await supabase
-            .from('packaging_inventory')
-            .update({
-              current_stock: existingItem.current_stock + item.quantity,
-              unit_cost_net: item.unit_price_net,
-            })
-            .eq('id', item.packaging_inventory_id);
-
-          await supabase.from('inventory_movements').insert([
-            {
-              packaging_inventory_id: item.packaging_inventory_id,
-              movement_type: 'entrada',
-              quantity: item.quantity,
-              reference_id: invoice.id,
-              reference_type: 'purchase_invoice',
-              notes: `Factura ${invoiceNumber}`,
-            },
-          ]);
-        }
-      }
 
       if (paymentCondition === 'credit') {
         await supabase.from('accounts_payable').insert([
@@ -186,9 +241,7 @@ export default function InvoicesPurchaseModule() {
     setPaymentCondition('cash');
     setCreditDays(30);
     setNotes('');
-    setLineItems([
-      { item_type: 'envase', item_name: '', format: '', quantity: 0, unit_price_net: 0, line_total_net: 0, packaging_inventory_id: null },
-    ]);
+    setLineItems([EMPTY_LINE_ITEM]);
   };
 
   const formatCurrency = (amount: number) => {
