@@ -274,7 +274,7 @@ Deno.serve(async (req: Request) => {
     const emailHTML = generateEmailHTML(customer_name, discount_code);
     const subject = "🌿 ¡Llegaste a tu décima cosecha! Tu regalo VIP te espera";
 
-    console.log(`Preparando email para ${customer_email} con código ${discount_code}`);
+
 
     const emailSent = {
       success: true,

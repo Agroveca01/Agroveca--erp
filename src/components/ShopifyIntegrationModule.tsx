@@ -36,7 +36,7 @@ interface ShopifyOrder {
 }
 
 export default function ShopifyIntegrationModule() {
-  const { user } = useAuth();
+  const { profile } = useAuth();
   const [config, setConfig] = useState<ShopifyConfig | null>(null);
   const [loading, setLoading] = useState(true);
   const [syncLogs, setSyncLogs] = useState<SyncLog[]>([]);
@@ -64,6 +64,8 @@ export default function ShopifyIntegrationModule() {
         .from('shopify_config')
         .select('*')
         .maybeSingle();
+
+
 
       if (error) throw error;
 
@@ -223,7 +225,7 @@ export default function ShopifyIntegrationModule() {
     }).format(amount);
   };
 
-  if (!user?.role || user.role !== 'admin') {
+  if (!profile?.role || profile.role !== 'admin') {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-center">

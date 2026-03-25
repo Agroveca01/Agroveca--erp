@@ -52,9 +52,6 @@ function AppContent() {
 
   const getRolePermissions = (role: string): Module[] => {
     const normalizedRole = role?.toLowerCase();
-    console.log('=== ROLE DEBUG ===');
-    console.log('Original role:', role);
-    console.log('Normalized role:', normalizedRole);
 
     if (normalizedRole === 'admin') {
       return ['dashboard', 'kpis', 'financial-health', 'fiscal', 'suppliers', 'invoices', 'payables', 'purchases', 'stock', 'production-sheet', 'inventory', 'production', 'costing', 'pricing', 'wholesale', 'sales', 'orders', 'crm', 'shopify', 'users', 'config'];
@@ -66,12 +63,9 @@ function AppContent() {
     return ['dashboard'];
   };
 
-  console.log('=== PROFILE & PERMISSIONS DEBUG ===');
-  console.log('Profile:', profile);
-  console.log('Profile role:', profile?.role);
 
-  const allowedModules = profile ? getRolePermissions(profile.role) : ['dashboard'];
-  console.log('Allowed modules:', allowedModules);
+  const allowedModules = profile ? getRolePermissions(profile?.role ?? '') : ['dashboard'];
+
 
   const menuItems = [
     { id: 'dashboard' as Module, name: 'Dashboard', icon: LayoutDashboard },
@@ -98,7 +92,7 @@ function AppContent() {
   ];
 
   const visibleMenuItems = menuItems.filter(item => allowedModules.includes(item.id));
-  console.log('Visible menu items:', visibleMenuItems.map(item => item.name));
+
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-[#0a0c10]">

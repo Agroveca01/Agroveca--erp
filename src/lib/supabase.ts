@@ -294,7 +294,7 @@ export interface AccountsReceivable {
   payment_score: string;
   created_at: string;
   updated_at: string;
-  customers?: Customer;
+  customers?: any;
 }
 
 export interface SystemAnnouncement {
