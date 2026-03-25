@@ -28,12 +28,66 @@ interface ShopifyOrder {
   }>;
 }
 
+const textEncoder = new TextEncoder();
+
+function toBase64(bytes: Uint8Array): string {
+  let binary = "";
+  for (const byte of bytes) {
+    binary += String.fromCharCode(byte);
+  }
+  return btoa(binary);
+}
+
+function timingSafeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+
+  let mismatch = 0;
+  for (let i = 0; i < a.length; i++) {
+    mismatch |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+
+  return mismatch === 0;
+}
+
+async function verifyShopifyWebhook(
+  payload: string,
+  providedHmac: string,
+  webhookSecret: string,
+): Promise<boolean> {
+  const cryptoKey = await crypto.subtle.importKey(
+    "raw",
+    textEncoder.encode(webhookSecret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+
+  const signature = await crypto.subtle.sign(
+    "HMAC",
+    cryptoKey,
+    textEncoder.encode(payload),
+  );
+
+  const expectedHmac = toBase64(new Uint8Array(signature));
+  return timingSafeEqual(expectedHmac, providedHmac);
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, {
       status: 200,
       headers: corsHeaders,
     });
+  }
+
+  if (req.method !== "POST") {
+    return new Response(
+      JSON.stringify({ error: "Method not allowed" }),
+      {
+        status: 405,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
+    );
   }
 
   try {
@@ -45,7 +99,7 @@ Deno.serve(async (req: Request) => {
     const shopDomain = req.headers.get("X-Shopify-Shop-Domain");
     const hmac = req.headers.get("X-Shopify-Hmac-Sha256");
 
-    if (!topic || !shopDomain) {
+    if (!topic || !shopDomain || !hmac) {
       return new Response(
         JSON.stringify({ error: "Missing Shopify headers" }),
         {
@@ -55,16 +109,66 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const orderData: ShopifyOrder = await req.json();
+    const rawBody = await req.text();
+
+    const { data: config } = await supabase
+      .from("shopify_config")
+      .select("shop_domain, webhook_secret, is_active")
+      .eq("is_active", true)
+      .maybeSingle();
+
+    if (!config) {
+      return new Response(
+        JSON.stringify({ error: "Shopify not configured" }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    if (!config.webhook_secret) {
+      return new Response(
+        JSON.stringify({ error: "Missing webhook secret" }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    if (config.shop_domain !== shopDomain) {
+      return new Response(
+        JSON.stringify({ error: "Shop domain mismatch" }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    const isValidWebhook = await verifyShopifyWebhook(rawBody, hmac, config.webhook_secret);
+
+    if (!isValidWebhook) {
+      return new Response(
+        JSON.stringify({ error: "Invalid webhook signature" }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    const orderData: ShopifyOrder = JSON.parse(rawBody);
 
     if (topic === "orders/create") {
-      const { data: config } = await supabase
+      const { data: activeConfig } = await supabase
         .from("shopify_config")
         .select("*")
         .eq("is_active", true)
         .maybeSingle();
 
-      if (!config) {
+      if (!activeConfig) {
         return new Response(
           JSON.stringify({ error: "Shopify not configured" }),
           {
@@ -126,8 +230,8 @@ Deno.serve(async (req: Request) => {
         "calculate_shopify_commission",
         {
           total_amount: totalAmount,
-          commission_pct: config.commission_percentage,
-          gateway_pct: config.payment_gateway_fee,
+          commission_pct: activeConfig.commission_percentage,
+          gateway_pct: activeConfig.payment_gateway_fee,
         }
       );
 

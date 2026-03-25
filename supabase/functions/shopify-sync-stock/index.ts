@@ -19,6 +19,16 @@ Deno.serve(async (req: Request) => {
     });
   }
 
+  if (req.method !== "POST") {
+    return new Response(
+      JSON.stringify({ error: "Method not allowed" }),
+      {
+        status: 405,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
+    );
+  }
+
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -30,6 +40,48 @@ Deno.serve(async (req: Request) => {
         JSON.stringify({ error: "Missing authorization" }),
         {
           status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    const token = authHeader.replace(/^Bearer\s+/i, "").trim();
+
+    if (!token) {
+      return new Response(
+        JSON.stringify({ error: "Invalid authorization header" }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    const { data: authResult, error: authError } = await supabase.auth.getUser(token);
+
+    if (authError || !authResult.user) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    const { data: profile } = await supabase
+      .from("user_profiles")
+      .select("role, is_active")
+      .eq("user_id", authResult.user.id)
+      .maybeSingle();
+
+    const normalizedRole = profile?.role?.toLowerCase();
+
+    if (!profile?.is_active || (normalizedRole !== "admin" && normalizedRole !== "operario")) {
+      return new Response(
+        JSON.stringify({ error: "Forbidden" }),
+        {
+          status: 403,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         }
       );

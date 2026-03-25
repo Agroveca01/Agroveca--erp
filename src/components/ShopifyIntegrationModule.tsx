@@ -191,10 +191,6 @@ export default function ShopifyIntegrationModule() {
             body: {
               product_id: product.id,
               quantity: product.stock_quantity,
-            },
-            headers: {
-              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY}`,
-              'Content-Type': 'application/json',
             }
           });
 
