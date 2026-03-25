@@ -2,6 +2,48 @@ import { useState, useEffect } from 'react';
 import { Beaker, CheckCircle, XCircle, AlertTriangle, Droplet, FileText } from 'lucide-react';
 import { supabase, Product, PackagingInventory, ProductionOrder } from '../lib/supabase';
 
+const RTU_CONCENTRATE_RATIO = 0.01;
+
+const parseFormatToLiters = (format: string): number | null => {
+  const normalizedFormat = format.trim().toLowerCase();
+  const numericMatch = normalizedFormat.match(/(\d+(?:[.,]\d+)?)/);
+
+  if (!numericMatch) return null;
+
+  const amount = parseFloat(numericMatch[1].replace(',', '.'));
+  if (Number.isNaN(amount) || amount <= 0) return null;
+
+  if (normalizedFormat.includes('cc') || normalizedFormat.includes('ml')) {
+    return amount / 1000;
+  }
+
+  if (normalizedFormat.includes('l')) {
+    return amount;
+  }
+
+  return null;
+};
+
+const getUnitVolumeLiters = (product: Product): number => {
+  const parsedFormat = parseFormatToLiters(product.format);
+
+  if (parsedFormat && parsedFormat > 0) {
+    return parsedFormat;
+  }
+
+  return product.production_unit_liters > 0 ? product.production_unit_liters : 0;
+};
+
+const getRequiredMix = (product: Product, targetUnits: number) => {
+  const totalVolumeLiters = getUnitVolumeLiters(product) * targetUnits;
+
+  return {
+    totalVolumeLiters,
+    concentrateRequired: totalVolumeLiters * RTU_CONCENTRATE_RATIO,
+    waterRequired: totalVolumeLiters * (1 - RTU_CONCENTRATE_RATIO),
+  };
+};
+
 export default function ProductionSheetModule() {
   const [products, setProducts] = useState<Product[]>([]);
   const [inventory, setInventory] = useState<PackagingInventory[]>([]);
@@ -41,12 +83,12 @@ export default function ProductionSheetModule() {
     if (!product) return;
 
     const format = product.format.toLowerCase();
-    const unitsPerBatch = (product as any).units_per_batch || 1;
+    const mix = getRequiredMix(product, targetUnits);
 
-    const concentratePerUnit = 100 / unitsPerBatch;
-    const waterPerUnit = concentratePerUnit * 99;
-    const totalConcentrate = (concentratePerUnit * targetUnits) / 1000;
-    const totalWater = (waterPerUnit * targetUnits) / 1000;
+    if (mix.totalVolumeLiters <= 0) {
+      alert('No se pudo calcular el volumen por unidad a partir del formato del producto.');
+      return;
+    }
 
     const errors: string[] = [];
 
@@ -78,8 +120,9 @@ export default function ProductionSheetModule() {
     setValidation({
       product,
       targetUnits,
-      concentrateRequired: totalConcentrate,
-      waterRequired: totalWater,
+      totalVolumeLiters: mix.totalVolumeLiters,
+      concentrateRequired: mix.concentrateRequired,
+      waterRequired: mix.waterRequired,
       envase,
       tapa,
       etiqueta,
@@ -136,14 +179,17 @@ export default function ProductionSheetModule() {
 
     if (wasteUnits === null || wasteLiters === null) return;
 
+    const wasteUnitsValue = parseFloat(wasteUnits) || 0;
+    const wasteLitersValue = parseFloat(wasteLiters) || 0;
+
     try {
       await supabase
         .from('production_orders')
         .update({
           status: 'completed',
           completed_at: new Date().toISOString(),
-          waste_units: parseFloat(wasteUnits) || 0,
-          waste_liters: parseFloat(wasteLiters) || 0,
+          waste_units: wasteUnitsValue,
+          waste_liters: wasteLitersValue,
         })
         .eq('id', orderId);
 
@@ -151,7 +197,11 @@ export default function ProductionSheetModule() {
       if (!product) return;
 
       const format = product.format.toLowerCase();
-      const successfulUnits = order.target_units - (parseFloat(wasteUnits) || 0);
+      const successfulUnits = Math.max(0, order.target_units - wasteUnitsValue);
+      const successfulLiters = Math.max(
+        0,
+        order.concentrate_required_liters + order.water_required_liters - wasteLitersValue,
+      );
 
       const envase = inventory.find(
         (item) => item.item_type === 'envase' && item.format && format.includes(item.format.toLowerCase())
@@ -166,46 +216,46 @@ export default function ProductionSheetModule() {
         (item) => item.item_type === 'etiqueta' && item.format && format.includes(item.format.toLowerCase())
       );
 
-      if (envase) {
+      const consumePackagingInventory = async (
+        packagingItem: PackagingInventory | undefined,
+        itemLabel: string,
+      ) => {
+        if (!packagingItem) return;
+
         await supabase
           .from('packaging_inventory')
-          .update({ current_stock: Math.max(0, envase.current_stock - order.target_units) })
-          .eq('id', envase.id);
+          .update({ current_stock: Math.max(0, packagingItem.current_stock - order.target_units) })
+          .eq('id', packagingItem.id);
 
         await supabase.from('inventory_movements').insert([
           {
-            packaging_inventory_id: envase.id,
+            packaging_inventory_id: packagingItem.id,
             movement_type: 'salida',
             quantity: -order.target_units,
             reference_id: orderId,
             reference_type: 'production_order',
-            notes: `Producción de ${order.target_units} unidades`,
+            notes: `${itemLabel} usado en orden ${order.order_number}`,
           },
         ]);
-      }
+      };
 
-      if (tapa) {
-        await supabase
-          .from('packaging_inventory')
-          .update({ current_stock: Math.max(0, tapa.current_stock - order.target_units) })
-          .eq('id', tapa.id);
-      }
+      await consumePackagingInventory(envase, 'Envases');
+      await consumePackagingInventory(tapa, 'Tapas/Gatillos');
+      await consumePackagingInventory(etiqueta, 'Etiquetas');
 
-      if (etiqueta) {
-        await supabase
-          .from('packaging_inventory')
-          .update({ current_stock: Math.max(0, etiqueta.current_stock - order.target_units) })
-          .eq('id', etiqueta.id);
-      }
+      const batchNumber = `BATCH-${product.product_id}-${Date.now()}`;
 
       await supabase.from('production_batches').insert([
         {
           product_id: product.id,
-          format: product.format,
-          quantity_produced: successfulUnits,
-          production_date: new Date().toISOString(),
-          biological_active: true,
-          notes: `Lote RTU producido - ${successfulUnits} unidades`,
+          batch_number: batchNumber,
+          quantity_liters: successfulLiters,
+          units_produced: successfulUnits,
+          raw_material_cost: 0,
+          packaging_cost: 0,
+          total_cost: 0,
+          cost_per_unit: 0,
+          notes: `Generado desde orden ${order.order_number}. Lote RTU producido - ${successfulUnits} unidades`,
         },
       ]);
 
