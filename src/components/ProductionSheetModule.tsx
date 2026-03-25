@@ -44,6 +44,10 @@ const getRequiredMix = (product: Product, targetUnits: number) => {
   };
 };
 
+const getBatchShelfLifeMonths = (product: Product) => {
+  return product.product_type === 'sustrato' ? 12 : null;
+};
+
 export default function ProductionSheetModule() {
   const [products, setProducts] = useState<Product[]>([]);
   const [inventory, setInventory] = useState<PackagingInventory[]>([]);
@@ -139,6 +143,7 @@ export default function ProductionSheetModule() {
 
     try {
       const orderNumber = `PROD-${Date.now()}`;
+      const startedAt = new Date().toISOString();
 
       const { error } = await supabase
         .from('production_orders')
@@ -152,6 +157,7 @@ export default function ProductionSheetModule() {
             status: 'pending',
             validation_passed: true,
             validation_errors: null,
+            started_at: startedAt,
           },
         ])
         .select()
@@ -181,13 +187,14 @@ export default function ProductionSheetModule() {
 
     const wasteUnitsValue = parseFloat(wasteUnits) || 0;
     const wasteLitersValue = parseFloat(wasteLiters) || 0;
+    const completedAt = new Date().toISOString();
 
     try {
       await supabase
         .from('production_orders')
         .update({
           status: 'completed',
-          completed_at: new Date().toISOString(),
+          completed_at: completedAt,
           waste_units: wasteUnitsValue,
           waste_liters: wasteLitersValue,
         })
@@ -202,6 +209,13 @@ export default function ProductionSheetModule() {
         0,
         order.concentrate_required_liters + order.water_required_liters - wasteLitersValue,
       );
+      const batchDate = completedAt.split('T')[0];
+      const shelfLifeMonths = getBatchShelfLifeMonths(product);
+      const expirationDate = shelfLifeMonths
+        ? new Date(new Date(batchDate).setMonth(new Date(batchDate).getMonth() + shelfLifeMonths))
+            .toISOString()
+            .split('T')[0]
+        : null;
 
       const envase = inventory.find(
         (item) => item.item_type === 'envase' && item.format && format.includes(item.format.toLowerCase())
@@ -248,7 +262,13 @@ export default function ProductionSheetModule() {
       await supabase.from('production_batches').insert([
         {
           product_id: product.id,
+          production_order_id: orderId,
           batch_number: batchNumber,
+          batch_date: batchDate,
+          production_date: batchDate,
+          expiration_date: expirationDate,
+          shelf_life_months: shelfLifeMonths,
+          alert_threshold_months: shelfLifeMonths ? Math.max(1, shelfLifeMonths - 3) : null,
           quantity_liters: successfulLiters,
           units_produced: successfulUnits,
           raw_material_cost: 0,
