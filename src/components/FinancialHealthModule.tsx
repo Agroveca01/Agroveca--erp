@@ -9,6 +9,14 @@ type TopCustomer = Customer & {
   paymentScore: string | null;
 };
 
+type RevenueChannel = {
+  label: string;
+  revenue: number;
+  percentage: number;
+  barClass: string;
+  amountClass: string;
+};
+
 export default function FinancialHealthModule() {
   const [payables, setPayables] = useState<AccountsPayable[]>([]);
   const [receivables, setReceivables] = useState<AccountsReceivable[]>([]);
@@ -57,24 +65,52 @@ export default function FinancialHealthModule() {
   const thisYear = new Date().getFullYear();
   const monthlyOrders = orders.filter((order) => {
     const orderDate = new Date(order.order_date);
-    return orderDate.getMonth() === thisMonth && orderDate.getFullYear() === thisYear;
+    return order.status === 'completed' && orderDate.getMonth() === thisMonth && orderDate.getFullYear() === thisYear;
   });
 
   const shopifyOrders = monthlyOrders.filter((o) => o.channel === 'shopify');
   const wholesaleOrders = monthlyOrders.filter((o) => o.channel === 'wholesale');
+  const otherOrders = monthlyOrders.filter((o) => o.channel !== 'shopify' && o.channel !== 'wholesale');
 
   const shopifyRevenue = shopifyOrders.reduce((sum, o) => sum + o.total_amount, 0);
   const wholesaleRevenue = wholesaleOrders.reduce((sum, o) => sum + o.total_amount, 0);
-  const totalRevenue = shopifyRevenue + wholesaleRevenue;
+  const otherRevenue = otherOrders.reduce((sum, o) => sum + o.total_amount, 0);
+  const totalRevenue = shopifyRevenue + wholesaleRevenue + otherRevenue;
 
   const shopifyPercentage = totalRevenue > 0 ? (shopifyRevenue / totalRevenue) * 100 : 0;
   const wholesalePercentage = totalRevenue > 0 ? (wholesaleRevenue / totalRevenue) * 100 : 0;
+  const otherPercentage = totalRevenue > 0 ? (otherRevenue / totalRevenue) * 100 : 0;
+
+  const revenueChannels: RevenueChannel[] = [
+    {
+      label: 'Shopify (Minorista)',
+      revenue: shopifyRevenue,
+      percentage: shopifyPercentage,
+      barClass: 'bg-[#10b981]',
+      amountClass: 'text-[#10b981]',
+    },
+    {
+      label: 'Distribuidores (Mayorista)',
+      revenue: wholesaleRevenue,
+      percentage: wholesalePercentage,
+      barClass: 'bg-gradient-to-r from-blue-500 to-cyan-500',
+      amountClass: 'text-blue-400',
+    },
+    {
+      label: 'Directo / Otros',
+      revenue: otherRevenue,
+      percentage: otherPercentage,
+      barClass: 'bg-gradient-to-r from-violet-500 to-fuchsia-500',
+      amountClass: 'text-violet-300',
+    },
+  ];
 
   const criticalReceivables = receivables.filter((r) => r.days_overdue > 30);
+  const activeCustomerOrders = customerOrders.filter((order) => order.status !== 'cancelled');
 
   const topCustomers: TopCustomer[] = customers
     .map((customer) => {
-      const ordersForCustomer = customerOrders.filter((order) => order.customer_id === customer.id);
+      const ordersForCustomer = activeCustomerOrders.filter((order) => order.customer_id === customer.id);
       const receivablesForCustomer = receivables.filter((receivable) => receivable.customer_id === customer.id);
       const totalSpent = ordersForCustomer.reduce((sum, order) => sum + order.total_amount, 0);
       const totalUnits = ordersForCustomer.reduce(
@@ -95,6 +131,7 @@ export default function FinancialHealthModule() {
         paymentScore,
       };
     })
+    .filter((customer) => customer.orderCount > 0 || customer.totalSpent > 0 || customer.paymentScore)
     .sort((a, b) => b.totalSpent - a.totalSpent)
     .slice(0, 5);
 
@@ -103,6 +140,13 @@ export default function FinancialHealthModule() {
       <div>
         <h2 className="text-3xl font-bold text-white tracking-tight">Salud Financiera y Liquidez</h2>
         <p className="text-[#10b981] mt-1 font-medium">Dashboard ejecutivo de flujo de caja proyectado</p>
+      </div>
+
+      <div className="bg-slate-900/40 border border-slate-700/50 rounded-xl p-4">
+        <p className="text-sm text-slate-300">
+          Base actual del dashboard: cuentas por pagar y por cobrar en estado pendiente, ventas completadas del mes en
+          `sales_orders` y pedidos CRM no cancelados en `customer_orders`.
+        </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -135,7 +179,7 @@ export default function FinancialHealthModule() {
           </div>
           <p className="text-3xl font-bold text-white">{liquidityRatio.toFixed(2)}</p>
           <p className={`text-sm mt-1 ${liquidityRatio >= 1 ? 'text-emerald-200' : 'text-orange-200'}`}>
-            {liquidityRatio >= 1 ? 'Autofinanciado' : 'Déficit'}
+            {totalPayables === 0 ? 'Sin cuentas por pagar pendientes' : liquidityRatio >= 1 ? 'Autofinanciado' : 'Déficit'}
           </p>
         </div>
 
@@ -176,55 +220,47 @@ export default function FinancialHealthModule() {
             <h3 className="text-xl font-bold text-white">Participación de Ventas</h3>
           </div>
 
-          <div className="space-y-4">
-            <div>
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-sm font-medium text-slate-300">Shopify (Minorista)</span>
-                <span className="text-sm font-bold text-[#10b981]">{shopifyPercentage.toFixed(1)}%</span>
-              </div>
-              <div className="w-full bg-slate-700 rounded-full h-4">
-                <div
-                  className="bg-[#10b981] h-4 rounded-full transition-all"
-                  style={{ width: `${shopifyPercentage}%` }}
-                ></div>
-              </div>
-              <div className="text-right mt-1">
-                <span className="text-xs text-slate-400">{formatCurrency(shopifyRevenue)}</span>
-              </div>
-            </div>
+            <div className="space-y-4">
+              {revenueChannels.map((channel) => (
+                <div key={channel.label}>
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm font-medium text-slate-300">{channel.label}</span>
+                    <span className={`text-sm font-bold ${channel.amountClass}`}>{channel.percentage.toFixed(1)}%</span>
+                  </div>
+                  <div className="w-full bg-slate-700 rounded-full h-4">
+                    <div
+                      className={`${channel.barClass} h-4 rounded-full transition-all`}
+                      style={{ width: `${channel.percentage}%` }}
+                    ></div>
+                  </div>
+                  <div className="text-right mt-1">
+                    <span className="text-xs text-slate-400">{formatCurrency(channel.revenue)}</span>
+                  </div>
+                </div>
+              ))}
 
-            <div>
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-sm font-medium text-slate-300">Distribuidores (Mayorista)</span>
-                <span className="text-sm font-bold text-blue-400">{wholesalePercentage.toFixed(1)}%</span>
+              <div className="border-t border-slate-700 pt-4">
+                <div className="flex justify-between items-center">
+                  <span className="font-bold text-white">Ventas completadas del mes</span>
+                  <span className="text-xl font-bold text-cyan-400">{formatCurrency(totalRevenue)}</span>
+                </div>
               </div>
-              <div className="w-full bg-slate-700 rounded-full h-4">
-                <div
-                  className="bg-gradient-to-r from-blue-500 to-cyan-500 h-4 rounded-full transition-all"
-                  style={{ width: `${wholesalePercentage}%` }}
-                ></div>
-              </div>
-              <div className="text-right mt-1">
-                <span className="text-xs text-slate-400">{formatCurrency(wholesaleRevenue)}</span>
-              </div>
-            </div>
-
-            <div className="border-t border-slate-700 pt-4">
-              <div className="flex justify-between items-center">
-                <span className="font-bold text-white">Total del Mes</span>
-                <span className="text-xl font-bold text-cyan-400">{formatCurrency(totalRevenue)}</span>
-              </div>
-            </div>
           </div>
         </div>
 
         <div className="bg-slate-900/50 backdrop-blur-sm rounded-xl shadow-2xl border border-slate-700/50 p-6">
           <div className="flex items-center space-x-3 mb-6">
             <BarChart3 className="w-6 h-6 text-amber-400" />
-            <h3 className="text-xl font-bold text-white">Top 5 Distribuidores</h3>
+            <h3 className="text-xl font-bold text-white">Top 5 Clientes con Historial</h3>
           </div>
 
           <div className="space-y-3">
+            {topCustomers.length === 0 && (
+              <div className="bg-slate-800/50 rounded-lg p-4 text-sm text-slate-400">
+                Todavía no hay suficientes pedidos CRM o cuentas por cobrar para mostrar un ranking confiable.
+              </div>
+            )}
+
             {topCustomers.map((customer, index) => (
               <div key={customer.id} className="bg-slate-800/50 rounded-lg p-4">
                 <div className="flex items-start justify-between mb-2">
