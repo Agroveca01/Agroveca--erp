@@ -6,6 +6,9 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Supabase .temp
+supabase/.temp
+
 node_modules
 dist
 dist-ssr

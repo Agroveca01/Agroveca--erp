@@ -48,11 +48,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const loadProfile = async (userId: string) => {
     try {
+      console.log('Cargando perfil para userId:', userId);
       const { data, error } = await supabase
         .from('user_profiles')
         .select('*')
         .eq('user_id', userId)
-        .maybeSingle();
+        .maybeSingle<UserProfile>();
 
       if (error) throw error;
       console.log('Perfil cargado:', data);
@@ -77,7 +78,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         email,
         password,
       });
-      return { error };
+
+      if (error) return { error };
+
+      return { error: null };
     } catch (error) {
       return { error: error as Error };
     }
@@ -95,21 +99,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         },
       });
 
+      console.log('Auth data:', authData);
+
       if (authError) return { error: authError };
 
-      if (authData.user) {
-        const { error: profileError } = await supabase
-          .from('user_profiles')
-          .insert({
-            user_id: authData.user.id,
-            email: email,
-            full_name: fullName,
-          });
-
-        if (profileError) {
-          console.error('Error creating profile:', profileError);
-          return { error: new Error('Database error saving new user: ' + profileError.message) };
-        }
+      if (authData.user && authData.session) {
+        await loadProfile(authData.user.id);
       }
 
       return { error: null };
