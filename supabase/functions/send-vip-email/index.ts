@@ -14,6 +14,8 @@ interface VIPEmailPayload {
   discount_code_id: string;
 }
 
+const EMAIL_MODE = "simulation";
+
 const generateEmailHTML = (customerName: string, discountCode: string): string => {
   return `
 <!DOCTYPE html>
@@ -278,6 +280,9 @@ Deno.serve(async (req: Request) => {
 
     const emailSent = {
       success: true,
+      simulated: true,
+      mode: EMAIL_MODE,
+      message: "Simulacion generada. No se envio un correo real.",
       customer_email,
       discount_code,
       subject,

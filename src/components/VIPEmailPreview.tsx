@@ -3,10 +3,21 @@ import { X } from 'lucide-react';
 interface VIPEmailPreviewProps {
   customerName: string;
   discountCode: string;
+  deliveryMode?: 'preview' | 'simulation';
   onClose: () => void;
 }
 
-export default function VIPEmailPreview({ customerName, discountCode, onClose }: VIPEmailPreviewProps) {
+export default function VIPEmailPreview({
+  customerName,
+  discountCode,
+  deliveryMode = 'preview',
+  onClose,
+}: VIPEmailPreviewProps) {
+  const noteText =
+    deliveryMode === 'simulation'
+      ? 'Esta es una simulacion del email. El sistema aun no envía correos reales desde esta acción.'
+      : 'Esta es una vista previa del email. El contenido mostrado corresponde al mensaje VIP configurado.';
+
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-slate-900 rounded-2xl border border-slate-700 max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
@@ -132,8 +143,7 @@ export default function VIPEmailPreview({ customerName, discountCode, onClose }:
 
           <div className="mt-6 bg-blue-900/40 border border-blue-500/50 rounded-lg p-4">
             <p className="text-sm text-blue-200">
-              <strong>Nota:</strong> Esta es una vista previa del email. El email real será enviado automáticamente
-              cuando un cliente complete su pedido #10.
+              <strong>Nota:</strong> {noteText}
             </p>
           </div>
         </div>

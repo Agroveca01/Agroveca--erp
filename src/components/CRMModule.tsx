@@ -53,6 +53,7 @@ export default function CRMModule() {
   const [showAddCustomer, setShowAddCustomer] = useState(false);
   const [showEmailPreview, setShowEmailPreview] = useState(false);
   const [previewCode, setPreviewCode] = useState<VIPDiscountCode | null>(null);
+  const [emailPreviewMode, setEmailPreviewMode] = useState<'preview' | 'simulation'>('preview');
   const [newCustomer, setNewCustomer] = useState({
     name: '',
     email: '',
@@ -146,14 +147,12 @@ export default function CRMModule() {
           customer_email: code.customers.email,
           discount_code: code.discount_code,
           discount_code_id: code.id,
-        },
-        headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY}`,
-          'Content-Type': 'application/json',
-        },
+        }
       });
 
       if (response.data && response.data.success) {
+        const isSimulated = Boolean(response.data?.simulated);
+
         await supabase
           .from('vip_discount_codes')
           .update({
@@ -168,10 +167,14 @@ export default function CRMModule() {
           p_email_type: 'vip_milestone',
           p_recipient_email: code.customers.email,
           p_subject: '🌿 ¡Llegaste a tu décima cosecha! Tu regalo VIP te espera',
-          p_delivered: true,
+          p_delivered: !isSimulated,
         });
 
-        alert('Email enviado exitosamente');
+        const responseMessage = isSimulated
+          ? 'Simulación registrada exitosamente. No se envió un correo real.'
+          : 'Email enviado exitosamente';
+
+        alert(responseMessage);
         loadVIPCodes();
       } else {
         throw new Error('Error al enviar el email');
@@ -184,6 +187,7 @@ export default function CRMModule() {
 
   const previewEmail = (code: VIPDiscountCode) => {
     setPreviewCode(code);
+    setEmailPreviewMode('preview');
     setShowEmailPreview(true);
   };
 
@@ -431,7 +435,7 @@ export default function CRMModule() {
                           <button
                             onClick={() => sendVIPEmail(code)}
                             className="bg-lime-500 hover:bg-lime-600 text-white p-2 rounded-lg transition-all"
-                            title="Enviar email VIP"
+                            title="Simular envío de email VIP"
                           >
                             <Send className="w-4 h-4" />
                           </button>
@@ -750,9 +754,11 @@ export default function CRMModule() {
         <VIPEmailPreview
           customerName={previewCode.customers.name}
           discountCode={previewCode.discount_code}
+          deliveryMode={emailPreviewMode}
           onClose={() => {
             setShowEmailPreview(false);
             setPreviewCode(null);
+            setEmailPreviewMode('preview');
           }}
         />
       )}
