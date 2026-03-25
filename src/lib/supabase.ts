@@ -67,8 +67,13 @@ export interface ProductRecipe {
 export interface ProductionBatch {
   id: string;
   product_id: string;
+  production_order_id: string | null;
   batch_number: string;
   batch_date: string;
+  production_date: string | null;
+  expiration_date: string | null;
+  shelf_life_months: number | null;
+  alert_threshold_months: number | null;
   quantity_liters: number;
   units_produced: number;
   raw_material_cost: number;
