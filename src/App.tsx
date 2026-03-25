@@ -30,7 +30,7 @@ import UserManual from './components/UserManual';
 type Module = 'dashboard' | 'inventory' | 'production' | 'costing' | 'pricing' | 'wholesale' | 'sales' | 'crm' | 'orders' | 'users' | 'shopify' | 'fiscal' | 'purchases' | 'stock' | 'production-sheet' | 'suppliers' | 'invoices' | 'payables' | 'financial-health' | 'kpis' | 'config';
 
 function AppContent() {
-  const { user, profile, loading, signOut } = useAuth();
+  const { user, profile, loading, signOut, isPasswordRecovery } = useAuth();
   const [activeTab, setActiveTab] = useState<Module>('dashboard');
   const [showQRScanner, setShowQRScanner] = useState(false);
   const [showManual, setShowManual] = useState(false);
@@ -46,7 +46,7 @@ function AppContent() {
     );
   }
 
-  if (!user) {
+  if (!user || isPasswordRecovery) {
     return <AuthModule />;
   }
 
