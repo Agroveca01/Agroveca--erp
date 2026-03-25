@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Bell, AlertTriangle, Info, CheckCircle, Plus, X } from 'lucide-react';
-import { supabase, SystemAnnouncement, AnnouncementRead } from '../lib/supabase';
+import { supabase, SystemAnnouncement, AnnouncementRead, UserProfileRole } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function AnnouncementWall() {
@@ -128,7 +128,7 @@ export default function AnnouncementWall() {
             )}
           </div>
         </div>
-        {profile?.role === 'admin' && (
+        {profile?.role === UserProfileRole.Admin && (
           <button
             onClick={() => setShowForm(!showForm)}
             className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-cyan-600 to-blue-600 text-white rounded-lg hover:shadow-lg transition-all font-semibold"
@@ -228,9 +228,8 @@ export default function AnnouncementWall() {
           return (
             <div
               key={announcement.id}
-              className={`rounded-lg p-4 border-2 transition-all ${getUrgencyColor(announcement.urgency)} ${
-                !isRead ? 'ring-2 ring-cyan-500/50' : ''
-              }`}
+              className={`rounded-lg p-4 border-2 transition-all ${getUrgencyColor(announcement.urgency)} ${!isRead ? 'ring-2 ring-cyan-500/50' : ''
+                }`}
             >
               <div className="flex items-start justify-between mb-2">
                 <div className="flex items-start space-x-3 flex-1">
@@ -265,7 +264,7 @@ export default function AnnouncementWall() {
                       <CheckCircle className="w-4 h-4" />
                     </button>
                   )}
-                  {profile?.role === 'admin' && (
+                  {profile?.role === UserProfileRole.Admin && (
                     <button
                       onClick={() => deleteAnnouncement(announcement.id)}
                       className="p-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"

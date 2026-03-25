@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ShoppingBag, Settings, RefreshCw, CheckCircle, XCircle, AlertCircle, DollarSign, Package, TrendingUp } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { supabase, UserProfileRole } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 
 interface ShopifyConfig {
@@ -225,7 +225,7 @@ export default function ShopifyIntegrationModule() {
     }).format(amount);
   };
 
-  if (!profile?.role || profile.role !== 'admin') {
+  if (!profile?.role || profile.role !== UserProfileRole.Admin) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-center">

@@ -93,12 +93,18 @@ export interface BusinessConfig {
   default_margin_target: number;
 }
 
+export enum UserProfileRole {
+  Admin = 'admin',
+  Vendedor = 'vendedor',
+  Operario = 'operario'
+}
+
 export interface UserProfile {
   id: string;
   user_id: string;
   email: string;
   full_name: string | null;
-  role?: string | null;
+  role?: UserProfileRole | null;
   phone: string | null;
   is_active: boolean;
   created_at: string;
