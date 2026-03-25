@@ -3,22 +3,24 @@ import { Plus, TrendingDown, Package, DollarSign, CheckCircle } from 'lucide-rea
 import { supabase, Purchase, PackagingInventory } from '../lib/supabase';
 import { calculateNetFromGross } from '../lib/taxUtils';
 
+const DEFAULT_FORM_STATE = {
+  supplier_name: '',
+  item_type: 'envase',
+  item_name: '',
+  format: '',
+  quantity: 0,
+  unit_price_gross: 0,
+  invoice_number: '',
+  notes: '',
+};
+
 export default function PurchasesModule() {
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [packagingInventory, setPackagingInventory] = useState<PackagingInventory[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
 
-  const [formData, setFormData] = useState({
-    supplier_name: '',
-    item_type: 'envase',
-    item_name: '',
-    format: '',
-    quantity: 0,
-    unit_price_gross: 0,
-    invoice_number: '',
-    notes: '',
-  });
+  const [formData, setFormData] = useState(DEFAULT_FORM_STATE);
 
   useEffect(() => {
     loadData();
@@ -46,6 +48,8 @@ export default function PurchasesModule() {
 
     const totalGross = formData.quantity * formData.unit_price_gross;
     const breakdown = calculateNetFromGross(totalGross);
+    const normalizedFormat = formData.format.trim() || null;
+    const unitCostNet = formData.quantity > 0 ? breakdown.net / formData.quantity : 0;
 
     try {
       const { data: purchase, error } = await supabase
@@ -73,21 +77,42 @@ export default function PurchasesModule() {
         (item) =>
           item.item_type === formData.item_type &&
           item.item_name === formData.item_name &&
-          item.format === formData.format
+          (item.format || null) === normalizedFormat
       );
+
+      let packagingInventoryId = existingItem?.id || null;
 
       if (existingItem) {
         await supabase
           .from('packaging_inventory')
           .update({
             current_stock: existingItem.current_stock + formData.quantity,
-            unit_cost_net: breakdown.net / formData.quantity,
+            unit_cost_net: unitCostNet,
           })
           .eq('id', existingItem.id);
+      } else {
+        const { data: newInventoryItem, error: inventoryInsertError } = await supabase
+          .from('packaging_inventory')
+          .insert([
+            {
+              item_type: formData.item_type,
+              item_name: formData.item_name,
+              format: normalizedFormat,
+              current_stock: formData.quantity,
+              unit_cost_net: unitCostNet,
+            },
+          ])
+          .select()
+          .single();
 
-        await supabase.from('inventory_movements').insert([
+        if (inventoryInsertError) throw inventoryInsertError;
+        packagingInventoryId = newInventoryItem.id;
+      }
+
+      if (packagingInventoryId) {
+        const { error: movementError } = await supabase.from('inventory_movements').insert([
           {
-            packaging_inventory_id: existingItem.id,
+            packaging_inventory_id: packagingInventoryId,
             movement_type: 'entrada',
             quantity: formData.quantity,
             reference_id: purchase?.id,
@@ -95,25 +120,18 @@ export default function PurchasesModule() {
             notes: `Compra a ${formData.supplier_name}`,
           },
         ]);
+
+        if (movementError) throw movementError;
       }
 
       await supabase
         .from('purchases')
-        .update({ inventory_updated: true })
+        .update({ inventory_updated: Boolean(packagingInventoryId) })
         .eq('id', purchase?.id);
 
       alert('Compra registrada exitosamente');
       setShowForm(false);
-      setFormData({
-        supplier_name: '',
-        item_type: 'envase',
-        item_name: '',
-        format: '',
-        quantity: 0,
-        unit_price_gross: 0,
-        invoice_number: '',
-        notes: '',
-      });
+      setFormData(DEFAULT_FORM_STATE);
       loadData();
     } catch (error) {
       console.error('Error creating purchase:', error);
