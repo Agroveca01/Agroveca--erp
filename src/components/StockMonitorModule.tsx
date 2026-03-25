@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
-import { AlertTriangle, Bell, Package, TrendingUp, ShoppingBag, Copy } from 'lucide-react';
-import { supabase, PackagingInventory, Product } from '../lib/supabase';
+import { AlertTriangle, Bell, Package, ShoppingBag, Copy } from 'lucide-react';
+import { supabase, PackagingInventory } from '../lib/supabase';
 
 export default function StockMonitorModule() {
   const [inventory, setInventory] = useState<PackagingInventory[]>([]);
-  const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [targetUnits, setTargetUnits] = useState(300);
 
@@ -15,13 +14,14 @@ export default function StockMonitorModule() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [inventoryData, productsData] = await Promise.all([
-        supabase.from('packaging_inventory').select('*').order('item_type, format'),
-        supabase.from('products').select('*'),
-      ]);
+      const { data, error } = await supabase
+        .from('packaging_inventory')
+        .select('*')
+        .order('item_type, format');
 
-      setInventory(inventoryData.data || []);
-      setProducts(productsData.data || []);
+      if (error) throw error;
+
+      setInventory(data || []);
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {

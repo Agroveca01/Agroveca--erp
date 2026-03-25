@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
-import { TrendingUp, DollarSign, Package, Target, AlertTriangle, TrendingDown, Calculator, Receipt, Truck, FileText, CheckCircle, BarChart3, Download } from 'lucide-react';
-import { supabase, Product, ProductRecipe, BusinessConfig, SalesOrder, FormatCost, FixedCostsConfig } from '../lib/supabase';
-import { calculateNetFromGross, calculateMarginOnNet, IVA_RATE, formatVATPercentage } from '../lib/taxUtils';
-import { getProductColor } from '../lib/colors';
+import { TrendingUp, Package, Target, AlertTriangle, TrendingDown, Calculator, Receipt, Truck, CheckCircle, BarChart3, Download } from 'lucide-react';
+import { supabase, Product, BusinessConfig, SalesOrder, FormatCost, FixedCostsConfig } from '../lib/supabase';
+import { calculateNetFromGross, formatVATPercentage } from '../lib/taxUtils';
 import { generateProductDataSheet } from '../lib/pdfGenerator';
 import ExpirationAlerts from './ExpirationAlerts';
 import AnnouncementWall from './AnnouncementWall';
@@ -194,8 +193,6 @@ export default function DashboardModule() {
     return orderDate.getMonth() === thisMonth && orderDate.getFullYear() === thisYear;
   });
 
-  const totalRevenue = orders.reduce((sum, order) => sum + order.total_amount, 0);
-  const totalRevenueBreakdown = calculateNetFromGross(totalRevenue);
   const monthlyRevenue = monthlyOrders.reduce((sum, order) => sum + order.total_amount, 0);
   const monthlyRevenueBreakdown = calculateNetFromGross(monthlyRevenue);
 
@@ -770,13 +767,6 @@ function WholesaleDistributorView({ products, onBack, loading }: WholesaleDistri
     }).format(amount);
   };
 
-  const getProductMOQ = (product: Product): number => {
-    const formatLower = product.format.toLowerCase();
-    if (formatLower.includes('rtu') && formatLower.includes('500')) return 12;
-    if (formatLower.includes('100') || formatLower.includes('200')) return 12;
-    return 12;
-  };
-
   const validateMOQ = (): boolean => {
     const rtuProducts = products.filter(p => p.product.format.toLowerCase().includes('rtu') && p.product.format.toLowerCase().includes('500'));
     const concentrateProducts = products.filter(p => {
@@ -828,15 +818,9 @@ function WholesaleDistributorView({ products, onBack, loading }: WholesaleDistri
 
   const shippingNetBreakdown = calculateNetFromGross(shippingCost);
   const totalGross = subtotalGross + shippingCost;
-  const totalNet = subtotalNet + shippingNetBreakdown.net;
-  const totalVAT = totalGross - totalNet;
   const finalCtpProfit = totalCtpProfitNet - shippingNetBreakdown.net;
 
   const totalUnitsSelected = Object.values(quantities).reduce((sum, qty) => sum + qty, 0);
-  const totalLitersEquivalent = selectedProducts.reduce((sum, p) => {
-    const qty = quantities[p.product.id] || 0;
-    return sum + (qty * 100 / (p.unitsPerBatch || 1));
-  }, 0);
 
   const shopifyComparison = selectedProducts.reduce((acc, p) => {
     const qty = quantities[p.product.id] || 0;

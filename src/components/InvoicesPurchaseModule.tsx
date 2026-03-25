@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { FileText, Plus, Trash2, Save, Calendar } from 'lucide-react';
-import { supabase, Supplier, PackagingInventory, PurchaseInvoice, PurchaseInvoiceItem } from '../lib/supabase';
+import { Plus, Trash2, Save } from 'lucide-react';
+import { supabase, Supplier, PackagingInventory, PurchaseInvoice } from '../lib/supabase';
 
 interface InvoiceLineItem {
   item_type: string;
@@ -16,7 +16,6 @@ export default function InvoicesPurchaseModule() {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [inventory, setInventory] = useState<PackagingInventory[]>([]);
   const [invoices, setInvoices] = useState<PurchaseInvoice[]>([]);
-  const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
 
   const [supplierId, setSupplierId] = useState('');
@@ -35,7 +34,6 @@ export default function InvoicesPurchaseModule() {
   }, []);
 
   const loadData = async () => {
-    setLoading(true);
     try {
       const [suppliersData, inventoryData, invoicesData] = await Promise.all([
         supabase.from('suppliers').select('*').eq('is_active', true).order('business_name'),
@@ -48,8 +46,6 @@ export default function InvoicesPurchaseModule() {
       setInvoices(invoicesData.data || []);
     } catch (error) {
       console.error('Error loading data:', error);
-    } finally {
-      setLoading(false);
     }
   };
 
