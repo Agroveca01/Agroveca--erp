@@ -1,8 +1,12 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ArrowLeft, KeyRound, Loader2, LogIn, Mail, UserPlus } from 'lucide-react';
+import {
+  AuthMode,
+  getAuthCopy,
+  isErrorMessage,
+  validatePasswordReset,
+} from '../lib/authModuleHelpers';
 import { useAuth } from '../contexts/useAuth';
-
-type AuthMode = 'login' | 'register' | 'forgot' | 'reset';
 
 export default function AuthModule() {
   const {
@@ -38,17 +42,7 @@ export default function AuthModule() {
   const isForgot = authMode === 'forgot';
   const isReset = authMode === 'reset';
 
-  const title = useMemo(() => {
-    if (isForgot) return 'Recuperar Contraseña';
-    if (isReset) return 'Nueva Contraseña';
-    return 'Cuida Tu Planta';
-  }, [isForgot, isReset]);
-
-  const subtitle = useMemo(() => {
-    if (isForgot) return 'Te enviaremos un enlace para restablecer tu contraseña';
-    if (isReset) return 'Define una nueva contraseña segura para tu cuenta';
-    return 'Sistema de Gestión Empresarial';
-  }, [isForgot, isReset]);
+  const { title, subtitle } = getAuthCopy(authMode);
 
   const resetSensitiveFields = () => {
     setPassword('');
@@ -87,13 +81,9 @@ export default function AuthModule() {
       }
 
       if (isReset) {
-        if (password.length < 6) {
-          setMessage('La nueva contraseña debe tener al menos 6 caracteres');
-          return;
-        }
-
-        if (password !== confirmPassword) {
-          setMessage('Las contraseñas no coinciden');
+        const validation = validatePasswordReset(password, confirmPassword);
+        if (validation.error) {
+          setMessage(validation.error);
           return;
         }
 
@@ -259,7 +249,7 @@ export default function AuthModule() {
 
             {message && (
               <div className={`p-4 rounded-xl text-sm font-medium ${
-                message.includes('Error') || message.includes('error') || message.includes('no coinciden')
+                isErrorMessage(message)
                   ? 'bg-red-900/30 text-red-300 border border-red-700/50'
                   : 'bg-emerald-900/30 text-emerald-300 border border-emerald-700/50'
               }`}>
