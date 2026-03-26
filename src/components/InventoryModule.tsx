@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { AlertCircle, Plus, CreditCard as Edit, Trash2, Package2, Beaker, X, Search } from 'lucide-react';
+import { filterProducts, filterRawMaterials, isLowStockMaterial } from '../lib/inventoryHelpers';
 import { Product, ProductType, RawMaterial, RawMaterialCategory, supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -34,11 +35,7 @@ export default function InventoryModule() {
   const [rawMaterialForm, setRawMaterialForm] = useState(DEFAULT_RAW_MATERIAL_FORM);
   const [productForm, setProductForm] = useState(DEFAULT_PRODUCT_FORM);
 
-  useEffect(() => {
-    loadData();
-  }, [view]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
     try {
       if (view === 'raw') {
@@ -63,7 +60,11 @@ export default function InventoryModule() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [view]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('es-CL', {
@@ -85,30 +86,9 @@ export default function InventoryModule() {
     return colors[category] || 'bg-slate-100 text-slate-700';
   };
 
-  const isLowStock = (material: RawMaterial) => {
-    return material.stock_quantity <= material.min_stock_alert;
-  };
+  const filteredRawMaterials = filterRawMaterials(rawMaterials, searchTerm);
 
-  const filteredRawMaterials = rawMaterials.filter((material) => {
-    if (!searchTerm) return true;
-    const searchLower = searchTerm.toLowerCase();
-    return (
-      material.name.toLowerCase().includes(searchLower) ||
-      material.category.toLowerCase().includes(searchLower) ||
-      material.unit.toLowerCase().includes(searchLower)
-    );
-  });
-
-  const filteredProducts = products.filter((product) => {
-    if (!searchTerm) return true;
-    const searchLower = searchTerm.toLowerCase();
-    return (
-      product.name.toLowerCase().includes(searchLower) ||
-      product.product_id.toLowerCase().includes(searchLower) ||
-      product.product_type.toLowerCase().includes(searchLower) ||
-      (product.format && product.format.toLowerCase().includes(searchLower))
-    );
-  });
+  const filteredProducts = filterProducts(products, searchTerm);
 
   const addRawMaterial = async () => {
     try {
@@ -409,10 +389,10 @@ export default function InventoryModule() {
                   </tr>
                 ) : (
                   filteredRawMaterials.map((material) => (
-                  <tr key={material.id} className={isLowStock(material) ? 'bg-red-50' : 'hover:bg-slate-50'}>
+                  <tr key={material.id} className={isLowStockMaterial(material) ? 'bg-red-50' : 'hover:bg-slate-50'}>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
-                        {isLowStock(material) && (
+                        {isLowStockMaterial(material) && (
                           <AlertCircle className="w-4 h-4 text-red-500 mr-2" />
                         )}
                         <span className="font-medium text-slate-900">{material.name}</span>
@@ -564,7 +544,7 @@ export default function InventoryModule() {
         <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
           <h3 className="text-sm font-medium text-slate-500 mb-2">Alertas de Stock Bajo</h3>
           <p className="text-2xl font-bold text-red-600">
-            {rawMaterials.filter(isLowStock).length}
+            {rawMaterials.filter(isLowStockMaterial).length}
           </p>
         </div>
         </div>
