@@ -54,6 +54,7 @@ export interface Product {
   ph_target: number | null;
   production_unit_liters: number;
   base_price: number;
+  units_per_batch?: number | null;
 }
 
 export interface ProductRecipe {

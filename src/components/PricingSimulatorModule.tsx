@@ -147,7 +147,7 @@ export default function PricingSimulatorModule() {
         return total + (cost * recipe.quantity_per_100l);
       }, 0);
 
-      const unitsPerBatch = (product as any).units_per_batch || 1;
+      const unitsPerBatch = product.units_per_batch || 1;
       const rawMaterialCost = unitsPerBatch > 0 ? rawMaterialCostPer100L / unitsPerBatch : rawMaterialCostPer100L;
 
       const formatCosts = getFormatCosts(product.format);
