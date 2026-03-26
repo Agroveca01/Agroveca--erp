@@ -1,20 +1,17 @@
 import { useState, useEffect } from 'react';
 import { Settings, Save } from 'lucide-react';
+import {
+  DEFAULT_BUSINESS_CONFIG_FORM,
+  getConfigSummary,
+  mapBusinessConfigToForm,
+} from '../lib/configHelpers';
 import { supabase, BusinessConfig } from '../lib/supabase';
 
 export default function ConfigModule() {
   const [config, setConfig] = useState<BusinessConfig | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [formData, setFormData] = useState({
-    company_name: '',
-    currency: 'CLP',
-    shopify_commission_pct: 5.0,
-    meta_ads_budget: 500000,
-    target_monthly_sales: 300,
-    shipping_cost: 750,
-    default_margin_target: 0.70,
-  });
+  const [formData, setFormData] = useState(DEFAULT_BUSINESS_CONFIG_FORM);
 
   useEffect(() => {
     loadConfig();
@@ -33,15 +30,7 @@ export default function ConfigModule() {
 
       if (data) {
         setConfig(data);
-        setFormData({
-          company_name: data.company_name,
-          currency: data.currency,
-          shopify_commission_pct: data.shopify_commission_pct,
-          meta_ads_budget: data.meta_ads_budget,
-          target_monthly_sales: data.target_monthly_sales,
-          shipping_cost: data.shipping_cost,
-          default_margin_target: data.default_margin_target,
-        });
+        setFormData(mapBusinessConfigToForm(data));
       }
     } catch (error) {
       console.error('Error loading config:', error);
@@ -82,6 +71,8 @@ export default function ConfigModule() {
       minimumFractionDigits: 0,
     }).format(amount);
   };
+
+  const configSummary = getConfigSummary(formData, formatCurrency);
 
   if (loading) {
     return (
@@ -258,17 +249,17 @@ export default function ConfigModule() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
           <div>
             <p className="text-emerald-700 font-medium">Comisiones</p>
-            <p className="text-emerald-900">Shopify: {formData.shopify_commission_pct}%</p>
-            <p className="text-emerald-900">Envío: {formatCurrency(formData.shipping_cost)}</p>
+            <p className="text-emerald-900">{configSummary.shopifyCommissionLabel}</p>
+            <p className="text-emerald-900">{configSummary.shippingCostLabel}</p>
           </div>
           <div>
             <p className="text-emerald-700 font-medium">Marketing</p>
-            <p className="text-emerald-900">Meta Ads: {formatCurrency(formData.meta_ads_budget)}/mes</p>
+            <p className="text-emerald-900">{configSummary.metaAdsBudgetLabel}</p>
           </div>
           <div>
             <p className="text-emerald-700 font-medium">Objetivos</p>
-            <p className="text-emerald-900">Ventas: {formData.target_monthly_sales} unidades/mes</p>
-            <p className="text-emerald-900">Margen: {(formData.default_margin_target * 100).toFixed(0)}%</p>
+            <p className="text-emerald-900">{configSummary.targetMonthlySalesLabel}</p>
+            <p className="text-emerald-900">{configSummary.marginLabel}</p>
           </div>
         </div>
       </div>
