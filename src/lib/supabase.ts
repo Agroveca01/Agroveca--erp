@@ -290,7 +290,7 @@ export interface ProductionOrder {
   water_required_liters: number;
   status: string;
   validation_passed: boolean;
-  validation_errors: any;
+  validation_errors: string[] | null;
   started_at: string | null;
   completed_at: string | null;
   waste_units: number;
@@ -390,7 +390,7 @@ export interface AccountsReceivable {
   payment_score: string;
   created_at: string;
   updated_at: string;
-  customers?: any;
+  customers?: Customer | null;
 }
 
 export interface SystemAnnouncement {

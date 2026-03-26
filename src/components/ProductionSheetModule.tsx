@@ -48,6 +48,19 @@ const getBatchShelfLifeMonths = (product: Product) => {
   return product.product_type === 'sustrato' ? 12 : null;
 };
 
+interface ProductionValidation {
+  product: Product;
+  targetUnits: number;
+  totalVolumeLiters: number;
+  concentrateRequired: number;
+  waterRequired: number;
+  envase?: PackagingInventory;
+  tapa?: PackagingInventory;
+  etiqueta?: PackagingInventory;
+  errors: string[];
+  passed: boolean;
+}
+
 export default function ProductionSheetModule() {
   const [products, setProducts] = useState<Product[]>([]);
   const [inventory, setInventory] = useState<PackagingInventory[]>([]);
@@ -55,7 +68,7 @@ export default function ProductionSheetModule() {
 
   const [selectedProduct, setSelectedProduct] = useState('');
   const [targetUnits, setTargetUnits] = useState(24);
-  const [validation, setValidation] = useState<any>(null);
+  const [validation, setValidation] = useState<ProductionValidation | null>(null);
 
   useEffect(() => {
     loadData();
