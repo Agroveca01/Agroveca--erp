@@ -1,5 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Package, TrendingUp, DollarSign, Target, Truck, Calculator, AlertTriangle, FileText, CheckCircle, Receipt } from 'lucide-react';
+import {
+  calculateWholesaleQuotation,
+  getProductMOQ,
+  getWholesaleFormatCosts,
+  validateMOQ,
+  WholesaleQuotationResult,
+} from '../lib/wholesaleHelpers';
 import { supabase, Product, FormatCost, FixedCostsConfig } from '../lib/supabase';
 import { calculateNetFromGross, IVA_RATE, formatVATPercentage } from '../lib/taxUtils';
 
@@ -19,34 +26,6 @@ interface ProductCostBreakdown {
   ctpProfitNet: number;
 }
 
-interface QuotationItem {
-  product: Product;
-  quantity: number;
-  pvpGross: number;
-  pvpNet: number;
-  pvpVAT: number;
-  discount: number;
-  netPriceGross: number;
-  netPriceNet: number;
-  netPriceVAT: number;
-  subtotalGross: number;
-  subtotalNet: number;
-  subtotalVAT: number;
-}
-
-interface Quotation {
-  items: QuotationItem[];
-  subtotalGross: number;
-  subtotalNet: number;
-  subtotalVAT: number;
-  shippingCost: number;
-  totalGross: number;
-  totalNet: number;
-  totalVAT: number;
-  totalCtpProfitNet: number;
-  totalCostsNet: number;
-}
-
 export default function WholesaleDistributionModule() {
   const [products, setProducts] = useState<Product[]>([]);
   const [productCosts, setProductCosts] = useState<ProductCostBreakdown[]>([]);
@@ -55,20 +34,16 @@ export default function WholesaleDistributionModule() {
   const [quotationItems, setQuotationItems] = useState<{ [key: string]: number }>({});
   const [editableShippingCost, setEditableShippingCost] = useState(5000);
   const [shippingZone, setShippingZone] = useState('');
-  const [quotation, setQuotation] = useState<Quotation | null>(null);
+  const [quotation, setQuotation] = useState<WholesaleQuotationResult>(null);
   const [moqError, setMoqError] = useState<string | null>(null);
 
   const DISTRIBUTOR_DISCOUNT = 0.40;
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  const calculateQuotation = useCallback(() => {
+    setQuotation(calculateWholesaleQuotation(quotationItems, productCosts, editableShippingCost, DISTRIBUTOR_DISCOUNT));
+  }, [editableShippingCost, productCosts, quotationItems]);
 
-  useEffect(() => {
-    calculateQuotation();
-  }, [quotationItems, editableShippingCost, productCosts]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
     try {
       const [productsData, formatCostsData, fixedCostsData] = await Promise.all([
@@ -93,23 +68,15 @@ export default function WholesaleDistributionModule() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const getFormatCostsByProduct = (product: Product, formats: FormatCost[], fallbackCosts: FixedCostsConfig | null): { container: number; label: number } => {
-    const formatLower = product.format.toLowerCase();
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
-    for (const fc of formats) {
-      const fcNameLower = fc.format_name.toLowerCase();
-      if (formatLower.includes(fcNameLower.replace('cc', '').replace('rtu', '').trim())) {
-        return { container: fc.container_cost, label: fc.label_cost };
-      }
-    }
-
-    return {
-      container: fallbackCosts?.container_cost || 450,
-      label: fallbackCosts?.label_cost || 150
-    };
-  };
+  useEffect(() => {
+    calculateQuotation();
+  }, [calculateQuotation]);
 
   const calculateProductCosts = async (prods: Product[], formats: FormatCost[], costs: FixedCostsConfig | null) => {
     const costsPromises = prods.map(async (product) => {
@@ -126,7 +93,7 @@ export default function WholesaleDistributionModule() {
       const unitsPerBatch = product.units_per_batch || 1;
       const rawMaterialCost = unitsPerBatch > 0 ? rawMaterialCostPer100L / unitsPerBatch : rawMaterialCostPer100L;
 
-      const formatCostData = getFormatCostsByProduct(product, formats, costs);
+      const formatCostData = getWholesaleFormatCosts(product, formats, costs);
       const containerCost = formatCostData.container;
       const labelCost = formatCostData.label;
       const packagingCost = costs?.packaging_cost || 500;
@@ -162,102 +129,6 @@ export default function WholesaleDistributionModule() {
     setProductCosts(costs_breakdown);
   };
 
-  const getProductMOQ = (product: Product): number => {
-    const formatLower = product.format.toLowerCase();
-
-    if (formatLower.includes('rtu') && formatLower.includes('500')) {
-      return 12;
-    }
-
-    if (formatLower.includes('100') || formatLower.includes('200')) {
-      return 12;
-    }
-
-    return 12;
-  };
-
-  const validateMOQ = (): string | null => {
-    for (const [productId, quantity] of Object.entries(quotationItems)) {
-      if (quantity > 0) {
-        const product = products.find(p => p.id === productId);
-        if (product) {
-          const moq = getProductMOQ(product);
-          if (quantity < moq) {
-            return `${product.name} requiere un mínimo de ${moq} unidades. Actualmente: ${quantity} unidades.`;
-          }
-        }
-      }
-    }
-    return null;
-  };
-
-  const calculateQuotation = () => {
-    const items: QuotationItem[] = [];
-    let subtotalGross = 0;
-    let subtotalNet = 0;
-    let subtotalVAT = 0;
-    let totalCtpProfitNet = 0;
-    let totalCostsNet = 0;
-
-    for (const [productId, quantity] of Object.entries(quotationItems)) {
-      if (quantity > 0) {
-        const costBreakdown = productCosts.find(pc => pc.product.id === productId);
-        if (costBreakdown) {
-          const discount = costBreakdown.pvpGross * DISTRIBUTOR_DISCOUNT;
-          const netPriceGross = costBreakdown.distributorPriceGross;
-          const netPriceBreakdown = calculateNetFromGross(netPriceGross);
-
-          const itemSubtotalGross = netPriceGross * quantity;
-          const itemSubtotalNet = netPriceBreakdown.net * quantity;
-          const itemSubtotalVAT = netPriceBreakdown.vat * quantity;
-
-          items.push({
-            product: costBreakdown.product,
-            quantity,
-            pvpGross: costBreakdown.pvpGross,
-            pvpNet: costBreakdown.pvpNet,
-            pvpVAT: costBreakdown.pvpVAT,
-            discount,
-            netPriceGross,
-            netPriceNet: netPriceBreakdown.net,
-            netPriceVAT: netPriceBreakdown.vat,
-            subtotalGross: itemSubtotalGross,
-            subtotalNet: itemSubtotalNet,
-            subtotalVAT: itemSubtotalVAT,
-          });
-
-          subtotalGross += itemSubtotalGross;
-          subtotalNet += itemSubtotalNet;
-          subtotalVAT += itemSubtotalVAT;
-          totalCtpProfitNet += costBreakdown.ctpProfitNet * quantity;
-          totalCostsNet += costBreakdown.totalCost * quantity;
-        }
-      }
-    }
-
-    if (items.length > 0) {
-      const totalGross = subtotalGross + editableShippingCost;
-      const totalNet = subtotalNet + (editableShippingCost / (1 + IVA_RATE));
-      const totalVAT = totalGross - totalNet;
-      const finalCtpProfit = totalCtpProfitNet - (editableShippingCost / (1 + IVA_RATE));
-
-      setQuotation({
-        items,
-        subtotalGross,
-        subtotalNet,
-        subtotalVAT,
-        shippingCost: editableShippingCost,
-        totalGross,
-        totalNet,
-        totalVAT,
-        totalCtpProfitNet: finalCtpProfit,
-        totalCostsNet,
-      });
-    } else {
-      setQuotation(null);
-    }
-  };
-
   const handleQuantityChange = (productId: string, quantity: number) => {
     setQuotationItems(prev => ({
       ...prev,
@@ -266,7 +137,7 @@ export default function WholesaleDistributionModule() {
   };
 
   const handleGenerateQuotation = () => {
-    const error = validateMOQ();
+    const error = validateMOQ(quotationItems, products);
     if (error) {
       setMoqError(error);
       return;
