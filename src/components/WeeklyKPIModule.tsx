@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Award, TrendingUp, Users, Download, Calendar } from 'lucide-react';
 import { getTopPerformers, getUserRankingPosition } from '../lib/dashboardHelpers';
 import { supabase, WeeklyKPI, ActivityLog } from '../lib/supabase';
+import { getMedalDisplay, getOtherRankedParticipants, getWeeklyRange } from '../lib/weeklyKpiHelpers';
 import { useAuth } from '../contexts/useAuth';
 
 export default function WeeklyKPIModule() {
@@ -11,8 +12,7 @@ export default function WeeklyKPIModule() {
 
   const loadData = useCallback(async () => {
     try {
-      const weekStart = getWeekStart(new Date());
-      const weekEnd = getWeekEnd(new Date());
+      const { weekStart, weekEnd } = getWeeklyRange(new Date());
 
       const [kpisData, activitiesData] = await Promise.all([
         supabase
@@ -42,48 +42,10 @@ export default function WeeklyKPIModule() {
     }
   }, [user, loadData]);
 
-  const getWeekStart = (date: Date) => {
-    const d = new Date(date);
-    const day = d.getDay();
-    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-    return new Date(d.setDate(diff)).toISOString().split('T')[0];
-  };
-
-  const getWeekEnd = (date: Date) => {
-    const d = new Date(date);
-    const day = d.getDay();
-    const diff = d.getDate() - day + (day === 0 ? 0 : 7);
-    return new Date(d.setDate(diff)).toISOString().split('T')[0];
-  };
-
-  const getMedalEmoji = (medal: string | null) => {
-    switch (medal) {
-      case 'gold':
-        return '🥇';
-      case 'silver':
-        return '🥈';
-      case 'bronze':
-        return '🥉';
-      default:
-        return '';
-    }
-  };
-
-  const getMedalColor = (medal: string | null) => {
-    switch (medal) {
-      case 'gold':
-        return 'from-amber-500 to-yellow-500';
-      case 'silver':
-        return 'from-slate-400 to-slate-500';
-      case 'bronze':
-        return 'from-orange-600 to-orange-700';
-      default:
-        return 'from-slate-600 to-slate-700';
-    }
-  };
-
   const myKPI = kpis.find((k) => k.user_id === user?.id);
   const topPerformers = getTopPerformers(kpis);
+  const otherParticipants = getOtherRankedParticipants(kpis);
+  const { weekStart, weekEnd } = getWeeklyRange(new Date());
 
   const generateReport = () => {
     alert('Funcionalidad de exportación de PDF en desarrollo');
@@ -95,7 +57,7 @@ export default function WeeklyKPIModule() {
         <div>
           <h2 className="text-3xl font-bold text-white tracking-tight">Monitor de Rendimiento Semanal</h2>
           <p className="text-emerald-400 mt-1 font-medium">
-            Semana del {getWeekStart(new Date())} al {getWeekEnd(new Date())}
+            Semana del {weekStart} al {weekEnd}
           </p>
         </div>
         <button
@@ -108,7 +70,7 @@ export default function WeeklyKPIModule() {
       </div>
 
       {myKPI && (
-        <div className={`bg-gradient-to-br ${getMedalColor(myKPI.medal)} rounded-xl shadow-2xl border-2 border-white/20 p-6`}>
+        <div className={`bg-gradient-to-br ${getMedalDisplay(myKPI.medal).colorClass} rounded-xl shadow-2xl border-2 border-white/20 p-6`}>
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center space-x-3">
               <Award className="w-8 h-8 text-white" />
@@ -118,7 +80,7 @@ export default function WeeklyKPIModule() {
               </div>
             </div>
             {myKPI.medal && (
-              <div className="text-6xl">{getMedalEmoji(myKPI.medal)}</div>
+              <div className="text-6xl">{getMedalDisplay(myKPI.medal).emoji}</div>
             )}
           </div>
 
@@ -160,11 +122,11 @@ export default function WeeklyKPIModule() {
           {topPerformers.map((kpi) => (
             <div
               key={kpi.id}
-              className={`bg-gradient-to-r ${getMedalColor(kpi.medal)} rounded-xl p-6 border-2 border-white/10`}
+              className={`bg-gradient-to-r ${getMedalDisplay(kpi.medal).colorClass} rounded-xl p-6 border-2 border-white/10`}
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
-                  <div className="text-5xl">{getMedalEmoji(kpi.medal)}</div>
+                  <div className="text-5xl">{getMedalDisplay(kpi.medal).emoji}</div>
                   <div>
                     <div className="text-2xl font-bold text-white mb-1">
                       {kpi.user_profiles?.full_name || 'Usuario'}
@@ -204,16 +166,16 @@ export default function WeeklyKPIModule() {
           ))}
         </div>
 
-        {kpis.length > 3 && (
+        {otherParticipants.length > 0 && (
           <div className="mt-6">
             <h4 className="font-bold text-slate-300 mb-3">Otros Participantes</h4>
             <div className="space-y-2">
-              {kpis.slice(3).map((kpi, index) => (
+              {otherParticipants.map((kpi) => (
                 <div key={kpi.id} className="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
                       <div className="w-8 h-8 bg-slate-700 rounded-full flex items-center justify-center text-white font-bold">
-                        {index + 4}
+                        {kpi.displayRank}
                       </div>
                       <div>
                         <div className="font-semibold text-white">{kpi.user_profiles?.full_name}</div>
