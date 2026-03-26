@@ -221,6 +221,10 @@ Traducir los riesgos y gaps detectados en `PRD.md` en un backlog tecnico acciona
 
 ### 10. Limpiar codigo muerto, imports sin uso y variables no utilizadas
 
+**Estado**
+- Resuelto: `npm run lint`, `npm run typecheck` y `npm test` quedan en verde tras cerrar la limpieza incremental de imports, helpers, callbacks y exports ruidosos.
+- Resuelto con cobertura: cada slice final de limpieza se cerro con tests de regresion sobre el comportamiento tocado.
+
 **Problema**
 - El typecheck muestra una capa grande de ruido por elementos no usados.
 
@@ -258,6 +262,10 @@ Traducir los riesgos y gaps detectados en `PRD.md` en un backlog tecnico acciona
 - Existen verificaciones automatizadas sobre los flujos mas sensibles.
 
 ### 12. Mantener documentacion tecnica alineada con el estado real
+
+**Estado**
+- Resuelto en baseline: `README.md`, `DEPLOYMENT.md`, `Vision.md` y `PRD.md` fueron actualizados para reflejar el estado real del sistema.
+- Trabajo continuo: seguir actualizando la documentacion cuando se cierre un nuevo bloque funcional o tecnico.
 
 **Problema**
 - El repositorio ya mostro deriva entre lo que parece ofrecer y lo que realmente ejecuta.

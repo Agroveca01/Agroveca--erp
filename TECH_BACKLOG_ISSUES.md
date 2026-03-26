@@ -216,6 +216,7 @@ Convertir `TECH_BACKLOG.md` en tareas concretas, ejecutables y faciles de asigna
 ### ISSUE P2-01 - Limpiar imports, variables y helpers sin uso
 
 - `Tipo`: refactor
+- `Estado`: resuelto; el repo quedo con `lint`, `typecheck` y `test` en verde, y la limpieza final se cerro con tests de regresion por slice.
 - `Bloquea`: legibilidad y mantenimiento
 - `Archivos`:
   - `src/components/AccountsPayableModule.tsx`
@@ -260,6 +261,7 @@ Convertir `TECH_BACKLOG.md` en tareas concretas, ejecutables y faciles de asigna
 ### ISSUE P2-03 - Alinear documentacion tecnica con el backlog ejecutado
 
 - `Tipo`: documentacion
+- `Estado`: resuelto en baseline; la documentacion principal del repo fue alineada con el estado real actual y queda como trabajo continuo mantenerla al dia.
 - `Bloquea`: claridad de producto y onboarding tecnico
 - `Archivos`:
   - `TECH_BACKLOG.md`
