@@ -1,29 +1,18 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { CanonicalUserRole, normalizeUserRole, supabase, UserProfile, UserProfileRole } from '../lib/supabase';
-
-const isRecoveryUrl = () => {
-  if (typeof window === 'undefined') {
-    return false;
-  }
-
-  const hash = window.location.hash.startsWith('#')
-    ? window.location.hash.slice(1)
-    : window.location.hash;
-
-  if (!hash) {
-    return false;
-  }
-
-  return new URLSearchParams(hash).get('type') === 'recovery';
-};
+import { buildRecoveryClearedUrl, isRecoveryUrl } from './authRecovery';
 
 const clearRecoveryHash = () => {
   if (typeof window === 'undefined' || !window.location.hash) {
     return;
   }
 
-  window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
+  window.history.replaceState(
+    {},
+    document.title,
+    buildRecoveryClearedUrl(window.location.pathname, window.location.search),
+  );
 };
 
 interface AuthContextType {
@@ -54,7 +43,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
 
   useEffect(() => {
-    setIsPasswordRecovery(isRecoveryUrl());
+    setIsPasswordRecovery(isRecoveryUrl(window.location.hash));
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
@@ -67,7 +56,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'PASSWORD_RECOVERY' || isRecoveryUrl()) {
+      if (event === 'PASSWORD_RECOVERY' || isRecoveryUrl(window.location.hash)) {
         setIsPasswordRecovery(true);
       } else if (event === 'SIGNED_OUT' || !session) {
         setIsPasswordRecovery(false);

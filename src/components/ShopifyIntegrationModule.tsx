@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ShoppingBag, Settings, RefreshCw, CheckCircle, XCircle, AlertCircle, DollarSign, TrendingUp } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { getShopifyStockSyncPayloads } from '../lib/shopifySync';
 import { useAuth } from '../contexts/AuthContext';
 
 interface ShopifyConfig {
@@ -167,10 +168,18 @@ export default function ShopifyIntegrationModule() {
         return;
       }
 
+      const syncPayloads = getShopifyStockSyncPayloads(products);
+
+      if (syncPayloads.length === 0) {
+        alert('No hay productos con datos completos para sincronizar con Shopify');
+        return;
+      }
+
       let successCount = 0;
       let errorCount = 0;
+      const skippedCount = products.length - syncPayloads.length;
 
-      for (const product of products) {
+      for (const payload of syncPayloads) {
         try {
           // const response = await fetch(
           //   `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/shopify-sync-stock`,
@@ -188,10 +197,7 @@ export default function ShopifyIntegrationModule() {
           // );
 
           const response = await supabase.functions.invoke('shopify-sync-stock', {
-            body: {
-              product_id: product.id,
-              quantity: product.stock_quantity,
-            }
+            body: payload
           });
 
           if (response.data && response.data.success) {
@@ -204,7 +210,7 @@ export default function ShopifyIntegrationModule() {
         }
       }
 
-      alert(`Sincronización completada:\n✓ Exitosos: ${successCount}\n✗ Errores: ${errorCount}`);
+      alert(`Sincronización completada:\n✓ Exitosos: ${successCount}\n✗ Errores: ${errorCount}\n- Omitidos: ${skippedCount}`);
       loadSyncLogs();
       loadConfig();
     } catch (error) {

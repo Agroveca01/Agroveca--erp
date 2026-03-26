@@ -239,6 +239,11 @@ Traducir los riesgos y gaps detectados en `PRD.md` en un backlog tecnico acciona
 
 ### 11. Incorporar validaciones minimas para flujos criticos
 
+**Estado**
+- Resuelto en baseline: el repo ya cuenta con `vitest`, script `npm test` y validaciones reproducibles sobre helpers fiscales y normalizacion de roles.
+- Resuelto en cobertura adicional: se sumaron checks sobre recovery auth, permisos por rol y seleccion de payloads Shopify en flujos de stock sync.
+- Pendiente parcial: crecer gradualmente hacia inventario o produccion si aparecen cambios de mayor riesgo.
+
 **Problema**
 - El repo no muestra una red minima de verificaciones automatizadas sobre auth, inventario, produccion y Shopify.
 
