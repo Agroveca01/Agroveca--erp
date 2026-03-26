@@ -50,6 +50,11 @@ export default function ExpirationAlerts() {
 
   const warningCount = alerts.filter(a => a.status === 'warning').length;
   const expiredCount = alerts.filter(a => a.status === 'expired').length;
+  const filterOptions: Array<{ value: 'all' | 'warning' | 'expired'; label: string }> = [
+    { value: 'all', label: 'Todos' },
+    { value: 'warning', label: 'Advertencia' },
+    { value: 'expired', label: 'Vencidos' },
+  ];
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -122,17 +127,17 @@ export default function ExpirationAlerts() {
 
       <div className="p-4 bg-slate-800/30">
         <div className="flex space-x-2">
-          {['all', 'warning', 'expired'].map((f) => (
+          {filterOptions.map((option) => (
             <button
-              key={f}
-              onClick={() => setFilter(f as any)}
+              key={option.value}
+              onClick={() => setFilter(option.value)}
               className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
-                filter === f
+                filter === option.value
                   ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/50'
                   : 'bg-slate-800/50 text-slate-400 border border-slate-700/50 hover:bg-slate-700/50'
               }`}
             >
-              {f === 'all' ? 'Todos' : f === 'warning' ? 'Advertencia' : 'Vencidos'}
+              {option.label}
             </button>
           ))}
         </div>

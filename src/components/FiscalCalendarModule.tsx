@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Calendar, AlertTriangle, DollarSign, CheckCircle, Clock, TrendingUp, Receipt, Calculator } from 'lucide-react';
-import { supabase, FiscalConfig, SalesOrder } from '../lib/supabase';
+import { supabase, FiscalConfig, Purchase, SalesOrder } from '../lib/supabase';
 import { calculateNetFromGross } from '../lib/taxUtils';
 
 export default function FiscalCalendarModule() {
   const [fiscalConfig, setFiscalConfig] = useState<FiscalConfig | null>(null);
   const [orders, setOrders] = useState<SalesOrder[]>([]);
-  const [purchases, setPurchases] = useState<any[]>([]);
+  const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [ppmPercentage, setPpmPercentage] = useState(1.0);
   const [withdrawalAmount, setWithdrawalAmount] = useState(0);
 
