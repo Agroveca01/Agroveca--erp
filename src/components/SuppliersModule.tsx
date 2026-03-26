@@ -1,5 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Users, Plus, Building, Phone, Mail, CreditCard as Edit, FileText } from 'lucide-react';
+import {
+  DEFAULT_SUPPLIER_FORM,
+  getSupplierStats,
+  mapSupplierToForm,
+} from '../lib/suppliersHelpers';
 import { supabase, Supplier, PurchaseInvoice } from '../lib/supabase';
 
 export default function SuppliersModule() {
@@ -9,18 +14,7 @@ export default function SuppliersModule() {
   const [showForm, setShowForm] = useState(false);
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
 
-  const [formData, setFormData] = useState({
-    rut: '',
-    business_name: '',
-    trade_name: '',
-    business_activity: '',
-    address: '',
-    phone: '',
-    email: '',
-    contact_person: '',
-    payment_terms_days: 30,
-    notes: '',
-  });
+  const [formData, setFormData] = useState(DEFAULT_SUPPLIER_FORM);
 
   const getErrorMessage = (error: unknown) => {
     return error instanceof Error ? error.message : 'Error al guardar proveedor';
@@ -61,18 +55,7 @@ export default function SuppliersModule() {
 
       setShowForm(false);
       setSelectedSupplier(null);
-      setFormData({
-        rut: '',
-        business_name: '',
-        trade_name: '',
-        business_activity: '',
-        address: '',
-        phone: '',
-        email: '',
-        contact_person: '',
-        payment_terms_days: 30,
-        notes: '',
-      });
+      setFormData(DEFAULT_SUPPLIER_FORM);
       loadData();
     } catch (error) {
       console.error('Error saving supplier:', error);
@@ -82,18 +65,7 @@ export default function SuppliersModule() {
 
   const editSupplier = (supplier: Supplier) => {
     setSelectedSupplier(supplier);
-    setFormData({
-      rut: supplier.rut,
-      business_name: supplier.business_name,
-      trade_name: supplier.trade_name || '',
-      business_activity: supplier.business_activity || '',
-      address: supplier.address || '',
-      phone: supplier.phone || '',
-      email: supplier.email || '',
-      contact_person: supplier.contact_person || '',
-      payment_terms_days: supplier.payment_terms_days,
-      notes: supplier.notes || '',
-    });
+    setFormData(mapSupplierToForm(supplier));
     setShowForm(true);
   };
 
@@ -103,15 +75,6 @@ export default function SuppliersModule() {
       currency: 'CLP',
       minimumFractionDigits: 0,
     }).format(amount);
-  };
-
-  const getSupplierStats = (supplierId: string) => {
-    const supplierInvoices = invoices.filter((inv) => inv.supplier_id === supplierId);
-    const totalSpent = supplierInvoices.reduce((sum, inv) => sum + inv.total_amount, 0);
-    const pendingInvoices = supplierInvoices.filter((inv) => inv.status === 'pending');
-    const pendingAmount = pendingInvoices.reduce((sum, inv) => sum + inv.total_amount, 0);
-
-    return { totalSpent, pendingAmount, invoiceCount: supplierInvoices.length };
   };
 
   return (
@@ -125,18 +88,7 @@ export default function SuppliersModule() {
           onClick={() => {
             setShowForm(!showForm);
             setSelectedSupplier(null);
-            setFormData({
-              rut: '',
-              business_name: '',
-              trade_name: '',
-              business_activity: '',
-              address: '',
-              phone: '',
-              email: '',
-              contact_person: '',
-              payment_terms_days: 30,
-              notes: '',
-            });
+            setFormData(DEFAULT_SUPPLIER_FORM);
           }}
           className="flex items-center space-x-2 bg-[#10b981] text-white px-5 py-3 rounded-xl hover:shadow-lg transition-all duration-300 font-semibold"
         >
@@ -289,7 +241,7 @@ export default function SuppliersModule() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {suppliers.map((supplier) => {
-          const stats = getSupplierStats(supplier.id);
+          const stats = getSupplierStats(invoices, supplier.id);
           return (
             <div key={supplier.id} className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl shadow-2xl border border-slate-700/50 p-6 hover:border-[#10b981]/50 transition-all">
               <div className="flex items-start justify-between mb-4">
