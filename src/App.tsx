@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { Package, Factory, DollarSign, ShoppingCart, Settings, LayoutDashboard, Users, ClipboardList, LogOut, QrCode, ShoppingBag, TrendingUp, Truck, Calendar, Receipt, AlertTriangle, Beaker, FileText, CreditCard, Activity, Building, Award, BookOpen } from 'lucide-react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ErrorBoundary } from './components/ErrorBoundary';
-import { getUserRoleLabel, normalizeUserRole } from './lib/supabase';
+import { getUserRoleLabel } from './lib/supabase';
+import { AppModule as Module, getRolePermissions } from './lib/permissions';
 import AuthModule from './components/AuthModule';
 import DashboardModule from './components/DashboardModule';
 import InventoryModule from './components/InventoryModule';
@@ -28,8 +29,6 @@ import FinancialHealthModule from './components/FinancialHealthModule';
 import WeeklyKPIModule from './components/WeeklyKPIModule';
 import UserManual from './components/UserManual';
 
-type Module = 'dashboard' | 'inventory' | 'production' | 'costing' | 'pricing' | 'wholesale' | 'sales' | 'crm' | 'orders' | 'users' | 'shopify' | 'fiscal' | 'purchases' | 'stock' | 'production-sheet' | 'suppliers' | 'invoices' | 'payables' | 'financial-health' | 'kpis' | 'config';
-
 function AppContent() {
   const { user, profile, loading, signOut, isPasswordRecovery } = useAuth();
   const [activeTab, setActiveTab] = useState<Module>('dashboard');
@@ -50,19 +49,6 @@ function AppContent() {
   if (!user || isPasswordRecovery) {
     return <AuthModule />;
   }
-
-  const getRolePermissions = (role?: string | null): Module[] => {
-    const normalizedRole = normalizeUserRole(role);
-
-    if (normalizedRole === 'admin') {
-      return ['dashboard', 'kpis', 'financial-health', 'fiscal', 'suppliers', 'invoices', 'payables', 'purchases', 'stock', 'production-sheet', 'inventory', 'production', 'costing', 'pricing', 'wholesale', 'sales', 'orders', 'crm', 'shopify', 'users', 'config'];
-    } else if (normalizedRole === 'operario') {
-      return ['dashboard', 'production-sheet', 'inventory', 'stock'];
-    } else if (normalizedRole === 'vendedor') {
-      return ['dashboard', 'pricing', 'wholesale', 'sales', 'orders', 'crm', 'financial-health'];
-    }
-    return ['dashboard'];
-  };
 
 
   const allowedModules = profile ? getRolePermissions(profile?.role ?? '') : ['dashboard'];
