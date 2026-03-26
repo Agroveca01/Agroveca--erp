@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Package, Factory, DollarSign, ShoppingCart, Settings, LayoutDashboard, Users, ClipboardList, LogOut, QrCode, ShoppingBag, TrendingUp, Truck, Calendar, Receipt, AlertTriangle, Beaker, FileText, CreditCard, Activity, Building, Award, BookOpen } from 'lucide-react';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { AuthProvider } from './contexts/AuthContext';
+import { useAuth } from './contexts/useAuth';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { getUserRoleLabel } from './lib/supabase';
 import { AppModule as Module, getRolePermissions } from './lib/permissions';

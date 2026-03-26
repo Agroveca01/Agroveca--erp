@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { AlertCircle, Plus, CreditCard as Edit, Trash2, Package2, Beaker, X, Search } from 'lucide-react';
 import { filterProducts, filterRawMaterials, isLowStockMaterial } from '../lib/inventoryHelpers';
 import { Product, ProductType, RawMaterial, RawMaterialCategory, supabase } from '../lib/supabase';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/useAuth';
 
 const DEFAULT_RAW_MATERIAL_FORM = {
   name: '',

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { CheckSquare, Square, AlertTriangle, Clock, TrendingUp } from 'lucide-react';
 import { calculateTaskCompletionRate, splitTasksByCriticality } from '../lib/dashboardHelpers';
 import { supabase, DailyTask } from '../lib/supabase';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/useAuth';
 
 export default function DailyTasksBoard() {
   const { user, profile } = useAuth();

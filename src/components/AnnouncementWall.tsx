@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Bell, AlertTriangle, Info, CheckCircle, Plus, X } from 'lucide-react';
 import { countUnreadAnnouncements } from '../lib/dashboardHelpers';
 import { supabase, SystemAnnouncement } from '../lib/supabase';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/useAuth';
 
 export default function AnnouncementWall() {
   const { user, isAdmin } = useAuth();

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { ShoppingBag, Settings, RefreshCw, CheckCircle, XCircle, AlertCircle, DollarSign, TrendingUp } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { getShopifyStockSyncPayloads } from '../lib/shopifySync';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/useAuth';
 
 interface ShopifyConfig {
   id: string;
