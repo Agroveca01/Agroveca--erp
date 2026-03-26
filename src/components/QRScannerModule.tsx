@@ -1,6 +1,7 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Html5QrcodeScanner, Html5QrcodeScanType } from 'html5-qrcode';
 import { QrCode, X, Search, CheckCircle } from 'lucide-react';
+import { getManualSearchMessage, getSearchMaterialResult, normalizeManualQrCode } from '../lib/qrScannerHelpers';
 import { supabase, RawMaterial } from '../lib/supabase';
 
 interface QRScannerModuleProps {
@@ -15,6 +16,43 @@ export default function QRScannerModule({ onClose, onMaterialFound }: QRScannerM
   const [material, setMaterial] = useState<RawMaterial | null>(null);
   const scannerRef = useRef<Html5QrcodeScanner | null>(null);
   const scannerInitialized = useRef(false);
+
+  const onScanError = (error: string) => {
+    console.log(error);
+  };
+
+  const searchMaterial = useCallback(async (qrCode: string) => {
+    setMessage('Buscando material...');
+    try {
+      const { data, error } = await supabase
+        .from('raw_materials')
+        .select('*')
+        .eq('qr_code', qrCode)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      const result = getSearchMaterialResult(data);
+      setMaterial(result.material);
+      setMessage(result.message);
+
+      if (result.material) {
+        onMaterialFound(result.material);
+      }
+    } catch (error) {
+      console.error('Error searching material:', error);
+      setMessage('Error al buscar el material');
+    }
+  }, [onMaterialFound]);
+
+  const onScanSuccess = useCallback(async (decodedText: string) => {
+    if (scannerRef.current) {
+      scannerRef.current.clear().catch(console.error);
+      scannerInitialized.current = false;
+    }
+    setScanning(false);
+    await searchMaterial(decodedText);
+  }, [searchMaterial]);
 
   useEffect(() => {
     if (scanning && !scannerInitialized.current) {
@@ -39,52 +77,16 @@ export default function QRScannerModule({ onClose, onMaterialFound }: QRScannerM
         scannerInitialized.current = false;
       }
     };
-  }, [scanning]);
-
-  const onScanSuccess = async (decodedText: string) => {
-    if (scannerRef.current) {
-      scannerRef.current.clear().catch(console.error);
-      scannerInitialized.current = false;
-    }
-    setScanning(false);
-    await searchMaterial(decodedText);
-  };
-
-  const onScanError = (error: string) => {
-    console.log(error);
-  };
-
-  const searchMaterial = async (qrCode: string) => {
-    setMessage('Buscando material...');
-    try {
-      const { data, error } = await supabase
-        .from('raw_materials')
-        .select('*')
-        .eq('qr_code', qrCode)
-        .maybeSingle();
-
-      if (error) throw error;
-
-      if (data) {
-        setMaterial(data);
-        setMessage('Material encontrado');
-        onMaterialFound(data);
-      } else {
-        setMessage('No se encontró ningún material con este código QR');
-        setMaterial(null);
-      }
-    } catch (error) {
-      console.error('Error searching material:', error);
-      setMessage('Error al buscar el material');
-    }
-  };
+  }, [onScanSuccess, scanning]);
 
   const handleManualSearch = () => {
-    if (!manualCode.trim()) {
-      setMessage('Por favor ingresa un código QR');
+    const validationMessage = getManualSearchMessage(manualCode);
+    if (validationMessage) {
+      setMessage(validationMessage);
       return;
     }
-    searchMaterial(manualCode.trim());
+
+    searchMaterial(normalizeManualQrCode(manualCode));
   };
 
   return (
