@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Award, TrendingUp, Users, Download, Calendar } from 'lucide-react';
 import { getTopPerformers, getUserRankingPosition } from '../lib/dashboardHelpers';
 import { supabase, WeeklyKPI, ActivityLog } from '../lib/supabase';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/useAuth';
 
 export default function WeeklyKPIModule() {
   const { user } = useAuth();

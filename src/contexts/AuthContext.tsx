@@ -1,39 +1,9 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
-import { CanonicalUserRole, normalizeUserRole, supabase, UserProfile, UserProfileRole } from '../lib/supabase';
-import { buildRecoveryClearedUrl, isRecoveryUrl } from './authRecovery';
-
-const clearRecoveryHash = () => {
-  if (typeof window === 'undefined' || !window.location.hash) {
-    return;
-  }
-
-  window.history.replaceState(
-    {},
-    document.title,
-    buildRecoveryClearedUrl(window.location.pathname, window.location.search),
-  );
-};
-
-interface AuthContextType {
-  user: User | null;
-  profile: UserProfile | null;
-  session: Session | null;
-  loading: boolean;
-  normalizedRole: CanonicalUserRole | null;
-  isAdmin: boolean;
-  isOperator: boolean;
-  isSeller: boolean;
-  isPasswordRecovery: boolean;
-  signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
-  signUp: (email: string, password: string, fullName: string) => Promise<{ error: Error | null }>;
-  requestPasswordReset: (email: string) => Promise<{ error: Error | null }>;
-  updatePassword: (password: string) => Promise<{ error: Error | null }>;
-  signOut: () => Promise<void>;
-  refreshProfile: () => Promise<void>;
-}
-
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+import { normalizeUserRole, supabase, UserProfile } from '../lib/supabase';
+import { AuthContext } from './authContextCore';
+import { buildAuthFlags, clearRecoveryHash } from './authContextHelpers';
+import { isRecoveryUrl } from './authRecovery';
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -164,7 +134,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (error) return { error };
 
       setLoading(true);
-      clearRecoveryHash();
+      if (typeof window !== 'undefined' && window.location.hash) {
+        window.history.replaceState(
+          {},
+          document.title,
+          clearRecoveryHash(window.location.pathname, window.location.search),
+        );
+      }
       await supabase.auth.signOut();
       setIsPasswordRecovery(false);
 
@@ -181,16 +157,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const normalizedRole = normalizeUserRole(profile?.role);
+  const authFlags = buildAuthFlags(normalizedRole);
 
   const value = {
     user,
     profile,
     session,
     loading,
-    normalizedRole,
-    isAdmin: normalizedRole === UserProfileRole.Admin,
-    isOperator: normalizedRole === UserProfileRole.Operario,
-    isSeller: normalizedRole === UserProfileRole.Vendedor,
+    normalizedRole: authFlags.normalizedRole,
+    isAdmin: authFlags.isAdmin,
+    isOperator: authFlags.isOperator,
+    isSeller: authFlags.isSeller,
     isPasswordRecovery,
     signIn,
     signUp,
@@ -201,12 +178,4 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-}
-
-export function useAuth() {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
 }

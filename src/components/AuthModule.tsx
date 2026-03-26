@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, KeyRound, Loader2, LogIn, Mail, UserPlus } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/useAuth';
 
 type AuthMode = 'login' | 'register' | 'forgot' | 'reset';
 
