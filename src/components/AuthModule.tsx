@@ -132,7 +132,7 @@ export default function AuthModule() {
       } else {
         setMessage('Cuenta creada exitosamente. Iniciando sesión...');
       }
-    } catch (_error) {
+    } catch {
       setMessage('Ocurrió un error inesperado');
     } finally {
       setLoading(false);

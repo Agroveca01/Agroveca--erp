@@ -181,21 +181,6 @@ export default function ShopifyIntegrationModule() {
 
       for (const payload of syncPayloads) {
         try {
-          // const response = await fetch(
-          //   `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/shopify-sync-stock`,
-          //   {
-          //     method: 'POST',
-          //     headers: {
-          //       'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-          //       'Content-Type': 'application/json',
-          //     },
-          //     body: JSON.stringify({
-          //       product_id: product.id,
-          //       quantity: product.stock_quantity,
-          //     }),
-          //   }
-          // );
-
           const response = await supabase.functions.invoke('shopify-sync-stock', {
             body: payload
           });
@@ -205,7 +190,7 @@ export default function ShopifyIntegrationModule() {
           } else {
             errorCount++;
           }
-        } catch (error) {
+        } catch {
           errorCount++;
         }
       }
