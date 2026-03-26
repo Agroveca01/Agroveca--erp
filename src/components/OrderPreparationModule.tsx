@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Star, Package, CheckCircle, AlertCircle, Gift, Printer, Search, Filter } from 'lucide-react';
+import { getOrderPreparationSummary, hasVipRewardPending } from '../lib/orderPreparationBoardHelpers';
 import { filterPreparedOrders, sanitizeOrderItems } from '../lib/orderPreparationHelpers';
 import { CustomerOrderItem, supabase } from '../lib/supabase';
 import VIPOrderLabel from './VIPOrderLabel';
@@ -117,9 +118,13 @@ export default function OrderPreparationModule() {
     );
   };
 
-  const pendingOrders = filteredOrders.filter(o => o.status === 'pending' || o.status === 'preparing');
-  const vipPendingOrders = pendingOrders.filter(o => o.reward_eligible && !o.reward_included);
-  const vipMilestoneOrders = pendingOrders.filter(o => o.is_vip_milestone && o.status === 'pending');
+  const {
+    pendingOrders,
+    vipPendingOrders,
+    vipMilestoneOrders,
+    readyOrdersCount,
+    shippedOrDeliveredCount,
+  } = getOrderPreparationSummary(filteredOrders);
 
   return (
     <div className="space-y-6">
@@ -154,9 +159,7 @@ export default function OrderPreparationModule() {
           <div className="flex items-center justify-between mb-4">
             <Package className="w-8 h-8 text-blue-400" />
           </div>
-          <p className="text-3xl font-bold text-white mb-1">
-            {filteredOrders.filter(o => o.status === 'ready').length}
-          </p>
+          <p className="text-3xl font-bold text-white mb-1">{readyOrdersCount}</p>
           <p className="text-blue-300 text-sm font-medium">Listos para Envío</p>
         </div>
 
@@ -164,9 +167,7 @@ export default function OrderPreparationModule() {
           <div className="flex items-center justify-between mb-4">
             <CheckCircle className="w-8 h-8 text-green-400" />
           </div>
-          <p className="text-3xl font-bold text-white mb-1">
-            {filteredOrders.filter(o => o.status === 'shipped' || o.status === 'delivered').length}
-          </p>
+          <p className="text-3xl font-bold text-white mb-1">{shippedOrDeliveredCount}</p>
           <p className="text-green-300 text-sm font-medium">En Tránsito/Entregados</p>
         </div>
       </div>
@@ -341,7 +342,7 @@ export default function OrderPreparationModule() {
             <div
               key={order.id}
               className={`rounded-lg p-4 transition-all ${
-                order.reward_eligible && !order.reward_included
+                hasVipRewardPending(order)
                   ? 'bg-gradient-to-r from-amber-900/40 to-amber-800/40 border-2 border-amber-500 shadow-lg shadow-amber-500/20'
                   : 'bg-slate-800/60 border border-slate-700 hover:border-slate-600'
               }`}
@@ -349,12 +350,12 @@ export default function OrderPreparationModule() {
               <div className="flex items-center justify-between">
                 <div className="flex-1">
                   <div className="flex items-center space-x-3 mb-2">
-                    {order.reward_eligible && !order.reward_included && (
+                    {hasVipRewardPending(order) && (
                       <Star className="w-5 h-5 text-amber-400 fill-amber-400 animate-pulse" />
                     )}
                     <span className="text-white font-bold">Orden #{order.order_number}</span>
                     {getStatusBadge(order.status)}
-                    {order.reward_eligible && !order.reward_included && (
+                    {hasVipRewardPending(order) && (
                       <span className="bg-amber-500 text-white px-2 py-1 rounded-full text-xs font-bold flex items-center space-x-1">
                         <Gift className="w-3 h-3" />
                         <span>VIP</span>
@@ -389,7 +390,7 @@ export default function OrderPreparationModule() {
                     <option value="delivered">Entregado</option>
                     <option value="cancelled">Cancelado</option>
                   </select>
-                  {order.reward_eligible && !order.reward_included && (
+                  {hasVipRewardPending(order) && (
                     <button
                       onClick={() => openVIPLabel(order)}
                       className="bg-amber-500 hover:bg-amber-600 text-white px-3 py-1 rounded-lg text-sm font-semibold transition-all flex items-center justify-center space-x-1"
