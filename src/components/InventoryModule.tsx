@@ -324,7 +324,7 @@ export default function InventoryModule() {
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="block w-full pl-10 pr-3 py-2 border border-slate-300 rounded-lg leading-5 bg-white placeholder-slate-500 focus:outline-none focus:placeholder-slate-400 focus:ring-2 focus:ring-emerald-500 focus:border-transparent sm:text-sm"
+              className="block w-full pl-10 pr-3 py-2 border border-slate-300 rounded-lg leading-5 bg-white text-slate-900 placeholder-slate-500 focus:outline-none focus:placeholder-slate-400 focus:ring-2 focus:ring-emerald-500 focus:border-transparent sm:text-sm"
               placeholder={view === 'raw' ? 'Buscar materias primas...' : 'Buscar productos...'}
             />
             {searchTerm && (
@@ -567,7 +567,7 @@ export default function InventoryModule() {
                     type="text"
                     value={rawMaterialForm.name}
                     onChange={(e) => setRawMaterialForm({ ...rawMaterialForm, name: e.target.value })}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-slate-300 bg-white text-slate-900 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                     placeholder="Nombre del material"
                   />
                 </div>
@@ -579,7 +579,7 @@ export default function InventoryModule() {
                   <select
                     value={rawMaterialForm.category}
                     onChange={(e) => setRawMaterialForm({ ...rawMaterialForm, category: e.target.value as RawMaterialCategory })}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-slate-300 bg-white text-slate-900 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                   >
                     <option value="chemical">Chemical</option>
                     <option value="natural">Natural</option>
@@ -598,7 +598,7 @@ export default function InventoryModule() {
                     <select
                       value={rawMaterialForm.unit}
                       onChange={(e) => setRawMaterialForm({ ...rawMaterialForm, unit: e.target.value })}
-                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                      className="w-full px-4 py-2 border border-slate-300 bg-white text-slate-900 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                     >
                       <option value="kg">kg</option>
                       <option value="L">L</option>
@@ -618,7 +618,7 @@ export default function InventoryModule() {
                       step="0.01"
                       value={rawMaterialForm.stock_quantity}
                       onChange={(e) => setRawMaterialForm({ ...rawMaterialForm, stock_quantity: parseFloat(e.target.value) || 0 })}
-                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                      className="w-full px-4 py-2 border border-slate-300 bg-white text-slate-900 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                     />
                   </div>
                 </div>
@@ -634,7 +634,7 @@ export default function InventoryModule() {
                       step="0.01"
                       value={rawMaterialForm.min_stock_alert}
                       onChange={(e) => setRawMaterialForm({ ...rawMaterialForm, min_stock_alert: parseFloat(e.target.value) || 0 })}
-                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                      className="w-full px-4 py-2 border border-slate-300 bg-white text-slate-900 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                     />
                   </div>
 
@@ -649,7 +649,7 @@ export default function InventoryModule() {
                         step="0.01"
                         value={rawMaterialForm.current_cost}
                         onChange={(e) => setRawMaterialForm({ ...rawMaterialForm, current_cost: parseFloat(e.target.value) || 0 })}
-                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                        className="w-full px-4 py-2 border border-slate-300 bg-white text-slate-900 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                       />
                     </div>
                   )}
@@ -676,7 +676,7 @@ export default function InventoryModule() {
                     type="text"
                     value={productForm.product_id}
                     onChange={(e) => setProductForm({ ...productForm, product_id: e.target.value })}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-slate-300 bg-white text-slate-900 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                     placeholder="SKU-001"
                   />
                 </div>
@@ -689,7 +689,7 @@ export default function InventoryModule() {
                     type="text"
                     value={productForm.name}
                     onChange={(e) => setProductForm({ ...productForm, name: e.target.value })}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-slate-300 bg-white text-slate-900 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                     placeholder="Nombre del producto"
                   />
                 </div>
@@ -702,7 +702,7 @@ export default function InventoryModule() {
                     <select
                     value={productForm.product_type}
                     onChange={(e) => setProductForm({ ...productForm, product_type: e.target.value as ProductType })}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-slate-300 bg-white text-slate-900 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                   >
                     <option value="concentrado">Concentrado</option>
                     <option value="sustrato">Sustrato</option>
@@ -718,7 +718,7 @@ export default function InventoryModule() {
                       type="text"
                       value={productForm.format}
                       onChange={(e) => setProductForm({ ...productForm, format: e.target.value })}
-                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                      className="w-full px-4 py-2 border border-slate-300 bg-white text-slate-900 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                       placeholder="500ml, 1L, etc."
                     />
                   </div>
@@ -733,7 +733,7 @@ export default function InventoryModule() {
                       type="color"
                       value={productForm.color}
                       onChange={(e) => setProductForm({ ...productForm, color: e.target.value })}
-                      className="w-full h-10 px-2 py-1 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                      className="w-full h-10 px-2 py-1 border border-slate-300 bg-white text-slate-900 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                     />
                   </div>
 
@@ -747,7 +747,7 @@ export default function InventoryModule() {
                       step="0.01"
                       value={productForm.base_price}
                       onChange={(e) => setProductForm({ ...productForm, base_price: parseFloat(e.target.value) || 0 })}
-                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                      className="w-full px-4 py-2 border border-slate-300 bg-white text-slate-900 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                     />
                   </div>
                 </div>
@@ -813,7 +813,7 @@ export default function InventoryModule() {
                     type="text"
                     value={rawMaterialForm.name}
                     onChange={(e) => setRawMaterialForm({ ...rawMaterialForm, name: e.target.value })}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-slate-300 bg-white text-slate-900 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                     placeholder="Nombre del material"
                   />
                 </div>
@@ -825,7 +825,7 @@ export default function InventoryModule() {
                   <select
                     value={rawMaterialForm.category}
                     onChange={(e) => setRawMaterialForm({ ...rawMaterialForm, category: e.target.value as RawMaterialCategory })}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-slate-300 bg-white text-slate-900 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                   >
                     <option value="chemical">Chemical</option>
                     <option value="natural">Natural</option>
@@ -844,7 +844,7 @@ export default function InventoryModule() {
                     <select
                       value={rawMaterialForm.unit}
                       onChange={(e) => setRawMaterialForm({ ...rawMaterialForm, unit: e.target.value })}
-                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                      className="w-full px-4 py-2 border border-slate-300 bg-white text-slate-900 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                     >
                       <option value="kg">kg</option>
                       <option value="L">L</option>
@@ -864,7 +864,7 @@ export default function InventoryModule() {
                       step="0.01"
                       value={rawMaterialForm.stock_quantity}
                       onChange={(e) => setRawMaterialForm({ ...rawMaterialForm, stock_quantity: parseFloat(e.target.value) || 0 })}
-                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                      className="w-full px-4 py-2 border border-slate-300 bg-white text-slate-900 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                     />
                   </div>
                 </div>
@@ -879,7 +879,7 @@ export default function InventoryModule() {
                     step="0.01"
                     value={rawMaterialForm.min_stock_alert}
                     onChange={(e) => setRawMaterialForm({ ...rawMaterialForm, min_stock_alert: parseFloat(e.target.value) || 0 })}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-slate-300 bg-white text-slate-900 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                   />
                 </div>
 
@@ -893,7 +893,7 @@ export default function InventoryModule() {
                     step="0.01"
                     value={rawMaterialForm.current_cost}
                     onChange={(e) => setRawMaterialForm({ ...rawMaterialForm, current_cost: parseFloat(e.target.value) || 0 })}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-slate-300 bg-white text-slate-900 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                   />
                 </div>
 
@@ -925,7 +925,7 @@ export default function InventoryModule() {
                     type="text"
                     value={productForm.name}
                     onChange={(e) => setProductForm({ ...productForm, name: e.target.value })}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-slate-300 bg-white text-slate-900 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                     placeholder="Nombre del producto"
                   />
                 </div>
@@ -938,7 +938,7 @@ export default function InventoryModule() {
                   <select
                     value={productForm.product_type}
                     onChange={(e) => setProductForm({ ...productForm, product_type: e.target.value as ProductType })}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-slate-300 bg-white text-slate-900 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                   >
                     <option value="concentrado">Concentrado</option>
                     <option value="sustrato">Sustrato</option>
@@ -954,7 +954,7 @@ export default function InventoryModule() {
                       type="text"
                       value={productForm.format}
                       onChange={(e) => setProductForm({ ...productForm, format: e.target.value })}
-                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                      className="w-full px-4 py-2 border border-slate-300 bg-white text-slate-900 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                       placeholder="500ml, 1L, etc."
                     />
                   </div>
@@ -969,7 +969,7 @@ export default function InventoryModule() {
                       type="color"
                       value={productForm.color}
                       onChange={(e) => setProductForm({ ...productForm, color: e.target.value })}
-                      className="w-full h-10 px-2 py-1 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                      className="w-full h-10 px-2 py-1 border border-slate-300 bg-white text-slate-900 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                     />
                   </div>
 
@@ -983,7 +983,7 @@ export default function InventoryModule() {
                       step="0.01"
                       value={productForm.base_price}
                       onChange={(e) => setProductForm({ ...productForm, base_price: parseFloat(e.target.value) || 0 })}
-                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                      className="w-full px-4 py-2 border border-slate-300 bg-white text-slate-900 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                     />
                   </div>
                 </div>

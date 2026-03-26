@@ -335,7 +335,7 @@ export default function PricingSimulatorModule() {
                 <select
                   value={selectedProduct || ''}
                   onChange={(e) => setSelectedProduct(e.target.value)}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-slate-300 bg-white text-slate-900 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent"
                 >
                   {products.map(p => (
                     <option key={p.id} value={p.id}>

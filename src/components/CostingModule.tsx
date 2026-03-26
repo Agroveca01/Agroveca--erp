@@ -423,7 +423,7 @@ export default function CostingModule() {
                     type="number"
                     value={tempCosts.container_cost}
                     onChange={(e) => setTempCosts({ ...tempCosts, container_cost: parseFloat(e.target.value) || 0 })}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-semibold text-lg"
+                    className="w-full px-3 py-2 border border-slate-300 bg-white text-slate-900 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-semibold text-lg"
                   />
                 ) : (
                   <p className="text-2xl font-bold text-slate-900">{formatCurrency(tempCosts.container_cost)}</p>
@@ -439,7 +439,7 @@ export default function CostingModule() {
                     type="number"
                     value={tempCosts.packaging_cost}
                     onChange={(e) => setTempCosts({ ...tempCosts, packaging_cost: parseFloat(e.target.value) || 0 })}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-semibold text-lg"
+                    className="w-full px-3 py-2 border border-slate-300 bg-white text-slate-900 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-semibold text-lg"
                   />
                 ) : (
                   <p className="text-2xl font-bold text-slate-900">{formatCurrency(tempCosts.packaging_cost)}</p>
@@ -455,7 +455,7 @@ export default function CostingModule() {
                     type="number"
                     value={tempCosts.label_cost}
                     onChange={(e) => setTempCosts({ ...tempCosts, label_cost: parseFloat(e.target.value) || 0 })}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-semibold text-lg"
+                    className="w-full px-3 py-2 border border-slate-300 bg-white text-slate-900 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-semibold text-lg"
                   />
                 ) : (
                   <p className="text-2xl font-bold text-slate-900">{formatCurrency(tempCosts.label_cost)}</p>
@@ -471,7 +471,7 @@ export default function CostingModule() {
                     type="number"
                     value={tempCosts.shipping_cost}
                     onChange={(e) => setTempCosts({ ...tempCosts, shipping_cost: parseFloat(e.target.value) || 0 })}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-semibold text-lg"
+                    className="w-full px-3 py-2 border border-slate-300 bg-white text-slate-900 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-semibold text-lg"
                   />
                 ) : (
                   <p className="text-2xl font-bold text-slate-900">{formatCurrency(tempCosts.shipping_cost)}</p>
@@ -617,7 +617,7 @@ export default function CostingModule() {
                               type="number"
                               value={displayData.rawMaterialCost}
                               onChange={(e) => updateEditableField(analysis.product.id, 'rawMaterialCost', parseFloat(e.target.value) || 0)}
-                              className="w-24 px-2 py-1 border border-blue-300 rounded focus:ring-2 focus:ring-blue-500 bg-blue-50"
+                              className="w-24 px-2 py-1 border border-blue-300 rounded focus:ring-2 focus:ring-blue-500 bg-blue-50 text-slate-900"
                             />
                           ) : (
                             <span className="text-slate-900">{formatCurrency(analysis.rawMaterialCost)}</span>
@@ -629,7 +629,7 @@ export default function CostingModule() {
                               type="number"
                               value={displayData.containerCost}
                               onChange={(e) => updateEditableField(analysis.product.id, 'containerCost', parseFloat(e.target.value) || 0)}
-                              className="w-24 px-2 py-1 border border-blue-300 rounded focus:ring-2 focus:ring-blue-500 bg-blue-50"
+                              className="w-24 px-2 py-1 border border-blue-300 rounded focus:ring-2 focus:ring-blue-500 bg-blue-50 text-slate-900"
                             />
                           ) : (
                             <span className="text-slate-900">{formatCurrency(analysis.containerCost)}</span>
@@ -641,7 +641,7 @@ export default function CostingModule() {
                               type="number"
                               value={displayData.packagingCost}
                               onChange={(e) => updateEditableField(analysis.product.id, 'packagingCost', parseFloat(e.target.value) || 0)}
-                              className="w-24 px-2 py-1 border border-blue-300 rounded focus:ring-2 focus:ring-blue-500 bg-blue-50"
+                              className="w-24 px-2 py-1 border border-blue-300 rounded focus:ring-2 focus:ring-blue-500 bg-blue-50 text-slate-900"
                             />
                           ) : (
                             <span className="text-slate-900">{formatCurrency(analysis.packagingCost)}</span>
@@ -653,7 +653,7 @@ export default function CostingModule() {
                               type="number"
                               value={displayData.labelCost}
                               onChange={(e) => updateEditableField(analysis.product.id, 'labelCost', parseFloat(e.target.value) || 0)}
-                              className="w-24 px-2 py-1 border border-blue-300 rounded focus:ring-2 focus:ring-blue-500 bg-blue-50"
+                              className="w-24 px-2 py-1 border border-blue-300 rounded focus:ring-2 focus:ring-blue-500 bg-blue-50 text-slate-900"
                             />
                           ) : (
                             <span className="text-slate-900">{formatCurrency(analysis.labelCost)}</span>
@@ -665,7 +665,7 @@ export default function CostingModule() {
                               type="number"
                               value={displayData.shippingCost}
                               onChange={(e) => updateEditableField(analysis.product.id, 'shippingCost', parseFloat(e.target.value) || 0)}
-                              className="w-24 px-2 py-1 border border-blue-300 rounded focus:ring-2 focus:ring-blue-500 bg-blue-50"
+                              className="w-24 px-2 py-1 border border-blue-300 rounded focus:ring-2 focus:ring-blue-500 bg-blue-50 text-slate-900"
                             />
                           ) : (
                             <span className="text-slate-900">{formatCurrency(analysis.shippingCost)}</span>
@@ -680,7 +680,7 @@ export default function CostingModule() {
                               type="number"
                               value={displayData.basePrice}
                               onChange={(e) => updateEditableField(analysis.product.id, 'basePrice', parseFloat(e.target.value) || 0)}
-                              className="w-24 px-2 py-1 border border-blue-300 rounded focus:ring-2 focus:ring-blue-500 bg-blue-50 font-bold"
+                              className="w-24 px-2 py-1 border border-blue-300 rounded focus:ring-2 focus:ring-blue-500 bg-blue-50 text-slate-900 font-bold"
                             />
                           ) : (
                             <span className="font-bold text-slate-900">{formatCurrency(analysis.basePrice)}</span>

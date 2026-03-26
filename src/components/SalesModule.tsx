@@ -378,7 +378,7 @@ export default function SalesModule() {
                   type="email"
                   value={customerEmail}
                   onChange={(e) => setCustomerEmail(e.target.value)}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-slate-300 bg-white text-slate-900 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                   placeholder="cliente@ejemplo.com"
                   required
                 />
@@ -394,7 +394,7 @@ export default function SalesModule() {
                 <select
                   value={orderForm.product_id}
                   onChange={(e) => setOrderForm({ ...orderForm, product_id: e.target.value })}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-slate-300 bg-white text-slate-900 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 >
                   {products.map((product) => (
                     <option key={product.id} value={product.id}>
@@ -413,7 +413,7 @@ export default function SalesModule() {
                   min="1"
                   value={orderForm.quantity}
                   onChange={(e) => setOrderForm({ ...orderForm, quantity: parseInt(e.target.value) || 1 })}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-slate-300 bg-white text-slate-900 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 />
               </div>
 
@@ -427,7 +427,7 @@ export default function SalesModule() {
                     if (!isSalesChannel(e.target.value)) return;
                     setOrderForm({ ...orderForm, channel: e.target.value });
                   }}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-slate-300 bg-white text-slate-900 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 >
                   <option value="shopify">Shopify</option>
                   <option value="direct">Venta Directa</option>
@@ -444,7 +444,7 @@ export default function SalesModule() {
                   value={orderForm.notes}
                   onChange={(e) => setOrderForm({ ...orderForm, notes: e.target.value })}
                   rows={2}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-slate-300 bg-white text-slate-900 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                   placeholder="Información adicional..."
                 />
               </div>
@@ -533,7 +533,7 @@ export default function SalesModule() {
                   type="number"
                   value={simulatorData.avgOrderValue}
                   onChange={(e) => setSimulatorData({ ...simulatorData, avgOrderValue: Number(e.target.value) })}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-slate-300 bg-white text-slate-900 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
 
@@ -545,7 +545,7 @@ export default function SalesModule() {
                   type="number"
                   value={simulatorData.newCustomers}
                   onChange={(e) => setSimulatorData({ ...simulatorData, newCustomers: Number(e.target.value) })}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-slate-300 bg-white text-slate-900 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
 
@@ -557,7 +557,7 @@ export default function SalesModule() {
                   type="number"
                   value={simulatorData.returningCustomers}
                   onChange={(e) => setSimulatorData({ ...simulatorData, returningCustomers: Number(e.target.value) })}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-slate-300 bg-white text-slate-900 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
 
@@ -573,7 +573,7 @@ export default function SalesModule() {
                   step="1"
                   value={simulatorData.vipDiscountRate * 100}
                   onChange={(e) => setSimulatorData({ ...simulatorData, vipDiscountRate: Number(e.target.value) / 100 })}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-slate-300 bg-white text-slate-900 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
                 <p className="text-xs text-slate-500 mt-1">
                   Porcentaje de clientes recurrentes que usan descuento VIP

@@ -442,7 +442,7 @@ export default function ShopifyIntegrationModule() {
                   value={configForm.shop_domain}
                   onChange={(e) => setConfigForm({ ...configForm, shop_domain: e.target.value })}
                   placeholder="tu-tienda.myshopify.com"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 bg-white text-slate-900 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                 />
               </div>
 
@@ -454,7 +454,7 @@ export default function ShopifyIntegrationModule() {
                   type="password"
                   value={configForm.access_token}
                   onChange={(e) => setConfigForm({ ...configForm, access_token: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 bg-white text-slate-900 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                 />
               </div>
 
@@ -466,7 +466,7 @@ export default function ShopifyIntegrationModule() {
                   type="text"
                   value={configForm.api_version}
                   onChange={(e) => setConfigForm({ ...configForm, api_version: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 bg-white text-slate-900 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                 />
               </div>
 
@@ -479,7 +479,7 @@ export default function ShopifyIntegrationModule() {
                   step="0.01"
                   value={configForm.commission_percentage}
                   onChange={(e) => setConfigForm({ ...configForm, commission_percentage: parseFloat(e.target.value) })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 bg-white text-slate-900 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                 />
               </div>
 
@@ -492,7 +492,7 @@ export default function ShopifyIntegrationModule() {
                   step="0.01"
                   value={configForm.payment_gateway_fee}
                   onChange={(e) => setConfigForm({ ...configForm, payment_gateway_fee: parseFloat(e.target.value) })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 bg-white text-slate-900 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                 />
               </div>
             </div>

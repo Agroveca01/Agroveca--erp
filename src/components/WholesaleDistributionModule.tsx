@@ -423,8 +423,8 @@ export default function WholesaleDistributionModule() {
                             step="1"
                             value={quantity}
                             onChange={(e) => handleQuantityChange(pc.product.id, parseInt(e.target.value) || 0)}
-                            className={`w-20 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
-                              !meetsMinimum ? 'border-red-400 bg-red-50' : 'border-slate-300'
+                            className={`w-20 px-3 py-2 border rounded-lg text-slate-900 focus:ring-2 focus:ring-blue-500 ${
+                              !meetsMinimum ? 'border-red-400 bg-red-50' : 'border-slate-300 bg-white'
                             }`}
                           />
                         </td>
@@ -451,7 +451,7 @@ export default function WholesaleDistributionModule() {
                   value={shippingZone}
                   onChange={(e) => setShippingZone(e.target.value)}
                   placeholder="Ej: Santiago Centro, Valparaíso, Concepción"
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500"
+                  className="w-full px-4 py-2 border border-slate-300 bg-white text-slate-900 rounded-lg focus:ring-2 focus:ring-amber-500"
                 />
               </div>
               <div>
@@ -464,7 +464,7 @@ export default function WholesaleDistributionModule() {
                   step="500"
                   value={editableShippingCost}
                   onChange={(e) => setEditableShippingCost(parseFloat(e.target.value) || 0)}
-                  className="w-full px-4 py-2 border border-amber-300 rounded-lg focus:ring-2 focus:ring-amber-500 font-bold text-lg bg-amber-50"
+                  className="w-full px-4 py-2 border border-amber-300 rounded-lg focus:ring-2 focus:ring-amber-500 font-bold text-lg bg-amber-50 text-slate-900"
                 />
                 <p className="text-xs text-slate-600 mt-1">
                   Incluye IVA - Neto: {formatCurrency(editableShippingCost / (1 + IVA_RATE))}

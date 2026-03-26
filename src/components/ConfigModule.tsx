@@ -119,7 +119,7 @@ export default function ConfigModule() {
                 type="text"
                 value={formData.company_name}
                 onChange={(e) => setFormData({ ...formData, company_name: e.target.value })}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-slate-300 bg-white text-slate-900 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
               />
             </div>
 
@@ -131,7 +131,7 @@ export default function ConfigModule() {
                 type="text"
                 value={formData.currency}
                 onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-slate-300 bg-white text-slate-900 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 disabled
               />
             </div>
@@ -149,7 +149,7 @@ export default function ConfigModule() {
                   step="0.1"
                   value={formData.shopify_commission_pct}
                   onChange={(e) => setFormData({ ...formData, shopify_commission_pct: parseFloat(e.target.value) })}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-slate-300 bg-white text-slate-900 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 />
                 <p className="text-sm text-slate-500 mt-1">
                   Comisión actual: {formData.shopify_commission_pct}%
@@ -164,7 +164,7 @@ export default function ConfigModule() {
                   type="number"
                   value={formData.shipping_cost}
                   onChange={(e) => setFormData({ ...formData, shipping_cost: parseFloat(e.target.value) })}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-slate-300 bg-white text-slate-900 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 />
                 <p className="text-sm text-slate-500 mt-1">
                   Costo actual: {formatCurrency(formData.shipping_cost)}
@@ -184,7 +184,7 @@ export default function ConfigModule() {
                   type="number"
                   value={formData.meta_ads_budget}
                   onChange={(e) => setFormData({ ...formData, meta_ads_budget: parseFloat(e.target.value) })}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-slate-300 bg-white text-slate-900 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 />
                 <p className="text-sm text-slate-500 mt-1">
                   Presupuesto: {formatCurrency(formData.meta_ads_budget)}
@@ -199,7 +199,7 @@ export default function ConfigModule() {
                   type="number"
                   value={formData.target_monthly_sales}
                   onChange={(e) => setFormData({ ...formData, target_monthly_sales: parseInt(e.target.value) })}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-slate-300 bg-white text-slate-900 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 />
                 <p className="text-sm text-slate-500 mt-1">
                   Meta: {formData.target_monthly_sales} unidades/mes
@@ -222,7 +222,7 @@ export default function ConfigModule() {
                   max="1"
                   value={formData.default_margin_target}
                   onChange={(e) => setFormData({ ...formData, default_margin_target: parseFloat(e.target.value) })}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-slate-300 bg-white text-slate-900 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 />
                 <p className="text-sm text-slate-500 mt-1">
                   Margen objetivo: {(formData.default_margin_target * 100).toFixed(0)}%

@@ -401,9 +401,9 @@ export default function DashboardModule() {
                   </th>
                 </tr>
               </thead>
-              <tbody className="glass-card divide-y divide-slate-200">
+              <tbody className="glass-card divide-y divide-slate-700">
                 {products.map((item) => (
-                  <tr key={item.product.id} className="hover:bg-slate-50">
+                  <tr key={item.product.id} className="hover:bg-slate-800/70">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div
@@ -411,34 +411,34 @@ export default function DashboardModule() {
                           style={{ backgroundColor: item.product.color || '#94a3b8' }}
                         />
                         <div>
-                          <div className="font-medium text-slate-900">{item.product.name}</div>
+                          <div className="font-medium text-white">{item.product.name}</div>
                           <div className="text-sm text-slate-300">{item.product.format}</div>
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap font-semibold text-slate-900">
+                    <td className="px-6 py-4 whitespace-nowrap font-semibold text-white">
                       {formatCurrency(item.basePriceGross)}
                       <div className="text-xs text-slate-300 mt-1">IVA incluido</div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap font-bold text-blue-700">
+                    <td className="px-6 py-4 whitespace-nowrap font-bold text-blue-300">
                       {formatCurrency(item.basePriceNet)}
                       <div className="text-xs text-slate-300 mt-1">{formatCurrency(item.basePriceGross)} / 1.19</div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap font-bold text-amber-600">
+                    <td className="px-6 py-4 whitespace-nowrap font-bold text-amber-300">
                       {formatCurrency(item.vatToReserve)}
-                      <div className="text-xs text-amber-700 mt-1">Débito Fiscal</div>
+                      <div className="text-xs text-amber-200 mt-1">Débito Fiscal</div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-slate-900">
+                    <td className="px-6 py-4 whitespace-nowrap text-white">
                       <div className="text-xs text-slate-300">MP: {formatCurrency(item.rawMaterialCost)}</div>
                       <div className="text-xs text-slate-300">Env+Emp+Eti: {formatCurrency(item.containerCost + item.packagingCost + item.labelCost)}</div>
                       <div className="text-xs text-slate-300">Envío: {formatCurrency(item.shippingCost)}</div>
-                      <div className="font-semibold text-red-600">{formatCurrency(item.realCost - item.shopifyCommissionNet)}</div>
+                      <div className="font-semibold text-red-300">{formatCurrency(item.realCost - item.shopifyCommissionNet)}</div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-red-600">
+                    <td className="px-6 py-4 whitespace-nowrap text-red-300">
                       -{formatCurrency(item.shopifyCommissionNet)}
                       <div className="text-xs text-slate-300 mt-1">5% del Neto</div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap font-bold text-emerald-600">
+                    <td className="px-6 py-4 whitespace-nowrap font-bold text-emerald-300">
                       {formatCurrency(item.netProfitNet)}
                       <div className="text-xs text-slate-300 mt-1">Neto - Costos - Comisión</div>
                     </td>
@@ -448,8 +448,8 @@ export default function DashboardModule() {
                       </span>
                       {item.netMarginNet < 50 && (
                         <div className="flex items-center space-x-1 mt-1">
-                          <AlertTriangle className="w-3 h-3 text-red-600" />
-                          <span className="text-xs text-red-600">Crítico</span>
+                          <AlertTriangle className="w-3 h-3 text-red-300" />
+                          <span className="text-xs text-red-300">Crítico</span>
                         </div>
                       )}
                     </td>
@@ -490,7 +490,7 @@ export default function DashboardModule() {
                 <div key={item.product.id} className="glass-card rounded-lg p-4 shadow-sm">
                   <div className="flex justify-between items-center">
                     <div>
-                      <p className="font-medium text-slate-900">{item.product.name}</p>
+                      <p className="font-medium text-white">{item.product.name}</p>
                       <p className="text-sm text-slate-300">
                         Utilidad Neta: {formatCurrency(item.netProfitNet)}
                       </p>
@@ -524,7 +524,7 @@ export default function DashboardModule() {
                 <div key={item.product.id} className="glass-card rounded-lg p-4 shadow-sm">
                   <div className="flex justify-between items-center">
                     <div>
-                      <p className="font-medium text-slate-900">{item.product.name}</p>
+                      <p className="font-medium text-white">{item.product.name}</p>
                       <p className="text-sm text-slate-300">
                         Utilidad Neta: {formatCurrency(item.netProfitNet)}
                       </p>
@@ -585,7 +585,7 @@ function SalesSimulator({ products, config, onClose }: SalesSimulatorProps) {
       <div className="glass-card rounded-lg shadow-xl max-w-3xl w-full p-6 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h3 className="text-2xl font-bold text-slate-900">Simulador de Ventas Shopify</h3>
+            <h3 className="text-2xl font-bold text-white">Simulador de Ventas Shopify</h3>
             <p className="text-slate-300 mt-1">Proyección con inversión en Meta Ads (valores netos)</p>
           </div>
           <button
@@ -598,14 +598,14 @@ function SalesSimulator({ products, config, onClose }: SalesSimulatorProps) {
 
         <div className="space-y-6">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
+            <label className="block text-sm font-medium text-slate-200 mb-2">
               Inversión en Meta Ads
             </label>
             <input
               type="number"
               value={adsInvestment}
               onChange={(e) => setAdsInvestment(parseFloat(e.target.value) || 0)}
-              className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg font-semibold"
+              className="w-full px-4 py-3 border border-slate-600 bg-slate-900/80 text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg font-semibold"
             />
             <p className="text-sm text-slate-300 mt-1">
               Inversión actual: {formatCurrency(adsInvestment)}
@@ -613,13 +613,13 @@ function SalesSimulator({ products, config, onClose }: SalesSimulatorProps) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
+            <label className="block text-sm font-medium text-slate-200 mb-2">
               Producto a Simular
             </label>
             <select
               value={selectedProduct}
               onChange={(e) => setSelectedProduct(e.target.value)}
-              className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg"
+              className="w-full px-4 py-3 border border-slate-600 bg-slate-900/80 text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg"
             >
               {products.map((item) => (
                 <option key={item.product.id} value={item.product.id}>
@@ -630,14 +630,14 @@ function SalesSimulator({ products, config, onClose }: SalesSimulatorProps) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
+            <label className="block text-sm font-medium text-slate-200 mb-2">
               Ventas Estimadas (unidades)
             </label>
             <input
               type="number"
               value={estimatedSales}
               onChange={(e) => setEstimatedSales(parseInt(e.target.value) || 0)}
-              className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg font-semibold"
+              className="w-full px-4 py-3 border border-slate-600 bg-slate-900/80 text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg font-semibold"
             />
             <p className="text-sm text-slate-300 mt-1">
               Meta mensual: {config.target_monthly_sales} unidades
@@ -650,34 +650,34 @@ function SalesSimulator({ products, config, onClose }: SalesSimulatorProps) {
             <div className="grid grid-cols-2 gap-4">
               <div className="glass-card rounded-lg p-4 shadow-sm border-2 border-blue-200">
                 <p className="text-sm text-slate-300 mb-1">Ingresos Brutos</p>
-                <p className="text-2xl font-bold text-slate-900">{formatCurrency(totalRevenueGross)}</p>
+                <p className="text-2xl font-bold text-white">{formatCurrency(totalRevenueGross)}</p>
                 <p className="text-xs text-slate-300 mt-1">IVA incluido</p>
               </div>
 
               <div className="glass-card rounded-lg p-4 shadow-sm border-2 border-green-200">
-                <p className="text-sm text-green-700 mb-1 font-bold">Ingresos Netos</p>
-                <p className="text-2xl font-bold text-green-700">{formatCurrency(totalRevenueNet)}</p>
-                <p className="text-xs text-green-600 mt-1">Sin IVA</p>
+                <p className="text-sm text-green-300 mb-1 font-bold">Ingresos Netos</p>
+                <p className="text-2xl font-bold text-green-300">{formatCurrency(totalRevenueNet)}</p>
+                <p className="text-xs text-green-200 mt-1">Sin IVA</p>
               </div>
 
               <div className="glass-card rounded-lg p-4 shadow-sm">
                 <p className="text-sm text-slate-300 mb-1">IVA Débito Total</p>
-                <p className="text-2xl font-bold text-amber-600">{formatCurrency(totalVATDebit)}</p>
+                <p className="text-2xl font-bold text-amber-300">{formatCurrency(totalVATDebit)}</p>
               </div>
 
               <div className="glass-card rounded-lg p-4 shadow-sm">
                 <p className="text-sm text-slate-300 mb-1">Costos Netos</p>
-                <p className="text-2xl font-bold text-red-600">{formatCurrency(totalCosts)}</p>
+                <p className="text-2xl font-bold text-red-300">{formatCurrency(totalCosts)}</p>
               </div>
 
               <div className="glass-card rounded-lg p-4 shadow-sm">
                 <p className="text-sm text-slate-300 mb-1">Utilidad Bruta (Neta)</p>
-                <p className="text-2xl font-bold text-emerald-600">{formatCurrency(grossProfit)}</p>
+                <p className="text-2xl font-bold text-emerald-300">{formatCurrency(grossProfit)}</p>
               </div>
 
               <div className="glass-card rounded-lg p-4 shadow-sm">
                 <p className="text-sm text-slate-300 mb-1">Inversión Ads</p>
-                <p className="text-2xl font-bold text-orange-600">{formatCurrency(adsInvestment)}</p>
+                <p className="text-2xl font-bold text-orange-300">{formatCurrency(adsInvestment)}</p>
               </div>
             </div>
 
@@ -701,19 +701,19 @@ function SalesSimulator({ products, config, onClose }: SalesSimulatorProps) {
               <div className="grid grid-cols-2 gap-2 text-sm">
                 <div>
                   <span className="text-slate-300">PVP Bruto:</span>
-                  <span className="font-medium text-slate-900 ml-2">
+                  <span className="font-medium text-white ml-2">
                     {formatCurrency(selectedProductData?.basePriceGross || 0)}
                   </span>
                 </div>
                 <div>
                   <span className="text-slate-300">PVP Neto:</span>
-                  <span className="font-medium text-blue-700 ml-2">
+                  <span className="font-medium text-blue-300 ml-2">
                     {formatCurrency(selectedProductData?.basePriceNet || 0)}
                   </span>
                 </div>
                 <div>
                   <span className="text-slate-300">Costo Neto:</span>
-                  <span className="font-medium text-slate-900 ml-2">
+                  <span className="font-medium text-white ml-2">
                     {formatCurrency(selectedProductData?.realCost || 0)}
                   </span>
                 </div>
@@ -923,18 +923,18 @@ function WholesaleDistributorView({ products, onBack, loading }: WholesaleDistri
                   <th className="px-6 py-3 text-right text-xs font-bold text-slate-700 uppercase">Subtotal</th>
                 </tr>
               </thead>
-              <tbody className="glass-card divide-y divide-slate-200">
+              <tbody className="glass-card divide-y divide-slate-700">
                 {products.map((p) => {
                   const qty = quantities[p.product.id] || 0;
                   const subtotal = p.distributorPriceGross * qty;
 
                   return (
-                    <tr key={p.product.id} className="hover:bg-slate-50">
+                    <tr key={p.product.id} className="hover:bg-slate-800/70">
                       <td className="px-6 py-3">
                         <div className="flex items-center">
                           <div className="w-3 h-3 rounded-full mr-2" style={{ backgroundColor: p.product.color || '#94a3b8' }} />
                           <div>
-                            <div className="font-medium text-slate-900">{p.product.name}</div>
+                            <div className="font-medium text-white">{p.product.name}</div>
                             <div className="text-xs text-slate-300">{p.product.format}</div>
                           </div>
                         </div>
@@ -942,14 +942,14 @@ function WholesaleDistributorView({ products, onBack, loading }: WholesaleDistri
                       <td className="px-6 py-3 text-right text-slate-300 line-through text-sm">
                         {formatCurrency(p.basePriceGross)}
                       </td>
-                      <td className="px-6 py-3 text-right font-bold text-blue-700">
+                      <td className="px-6 py-3 text-right font-bold text-blue-300">
                         {formatCurrency(p.distributorPriceNet)}
                         <div className="text-xs text-slate-300 mt-1">-40% del PVP Neto</div>
                       </td>
-                      <td className="px-6 py-3 text-right text-sm text-amber-600 font-semibold">
+                      <td className="px-6 py-3 text-right text-sm text-amber-300 font-semibold">
                         {formatCurrency(p.distributorVAT)}
                       </td>
-                      <td className="px-6 py-3 text-right font-bold text-emerald-700">
+                      <td className="px-6 py-3 text-right font-bold text-emerald-300">
                         {formatCurrency(p.distributorPriceGross)}
                       </td>
                       <td className="px-6 py-3 text-center">
@@ -959,10 +959,10 @@ function WholesaleDistributorView({ products, onBack, loading }: WholesaleDistri
                           step="1"
                           value={qty}
                           onChange={(e) => handleQuantityChange(p.product.id, parseInt(e.target.value) || 0)}
-                          className="w-24 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-center font-semibold"
+                          className="w-24 px-3 py-2 border border-slate-600 bg-slate-900/80 text-white rounded-lg focus:ring-2 focus:ring-blue-500 text-center font-semibold"
                         />
                       </td>
-                      <td className="px-6 py-3 text-right font-bold text-slate-900">
+                      <td className="px-6 py-3 text-right font-bold text-white">
                         {qty > 0 ? formatCurrency(subtotal) : '-'}
                       </td>
                     </tr>

@@ -140,7 +140,7 @@ export default function QRScannerModule({ onClose, onMaterialFound }: QRScannerM
                     value={manualCode}
                     onChange={(e) => setManualCode(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && handleManualSearch()}
-                    className="flex-1 px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#10b981] focus:border-[#10b981]"
+                    className="flex-1 px-4 py-2 border border-slate-300 bg-white text-slate-900 rounded-lg focus:ring-2 focus:ring-[#10b981] focus:border-[#10b981]"
                     placeholder="Pega el código aquí"
                   />
                   <button

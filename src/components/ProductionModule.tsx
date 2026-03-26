@@ -421,7 +421,7 @@ export default function ProductionModule() {
                   const product = products.find(p => p.id === e.target.value);
                   setSelectedProduct(product || null);
                 }}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-slate-300 bg-white text-slate-900 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
               >
                 {products.map((product) => (
                   <option key={product.id} value={product.id}>
@@ -680,7 +680,7 @@ export default function ProductionModule() {
                     const product = products.find(p => p.id === e.target.value);
                     setSelectedProduct(product || null);
                   }}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-slate-300 bg-white text-slate-900 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 >
                   {products.map((product) => (
                     <option key={product.id} value={product.id}>
@@ -698,7 +698,7 @@ export default function ProductionModule() {
                   type="number"
                   value={batchForm.quantity_liters}
                   onChange={(e) => setBatchForm({ ...batchForm, quantity_liters: parseFloat(e.target.value) })}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-slate-300 bg-white text-slate-900 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 />
               </div>
 
@@ -710,7 +710,7 @@ export default function ProductionModule() {
                   type="number"
                   value={batchForm.units_produced}
                   onChange={(e) => setBatchForm({ ...batchForm, units_produced: parseInt(e.target.value) })}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-slate-300 bg-white text-slate-900 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 />
               </div>
 
@@ -722,7 +722,7 @@ export default function ProductionModule() {
                   value={batchForm.notes}
                   onChange={(e) => setBatchForm({ ...batchForm, notes: e.target.value })}
                   rows={3}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-slate-300 bg-white text-slate-900 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 />
               </div>
 
@@ -792,7 +792,7 @@ export default function ProductionModule() {
                   step="0.01"
                   defaultValue={editingRecipe.quantity_per_100l}
                   id="editQuantity"
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-slate-300 bg-white text-slate-900 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 />
               </div>
             </div>
@@ -847,7 +847,7 @@ export default function ProductionModule() {
                 <select
                   value={newIngredient.raw_material_id}
                   onChange={(e) => setNewIngredient({ ...newIngredient, raw_material_id: e.target.value })}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-slate-300 bg-white text-slate-900 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 >
                   <option value="">Seleccionar materia prima</option>
                   {availableMaterials.map((material) => (
@@ -868,7 +868,7 @@ export default function ProductionModule() {
                   step="0.01"
                   value={newIngredient.quantity_per_100l}
                   onChange={(e) => setNewIngredient({ ...newIngredient, quantity_per_100l: parseFloat(e.target.value) || 0 })}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-slate-300 bg-white text-slate-900 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                   placeholder="0.00"
                 />
                 {newIngredient.raw_material_id && newIngredient.quantity_per_100l > 0 && (
@@ -957,7 +957,7 @@ export default function ProductionModule() {
                     type="text"
                     value={newProductForm.name}
                     onChange={(e) => setNewProductForm({ ...newProductForm, name: e.target.value })}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-slate-300 bg-white text-slate-900 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="Ej: Limpiador Multiusos Lavanda"
                   />
                 </div>
@@ -970,7 +970,7 @@ export default function ProductionModule() {
                     type="text"
                     value={newProductForm.product_id}
                     onChange={(e) => setNewProductForm({ ...newProductForm, product_id: e.target.value })}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-slate-300 bg-white text-slate-900 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="Ej: CONC-LAV-001"
                   />
                 </div>
@@ -985,7 +985,7 @@ export default function ProductionModule() {
                     type="text"
                     value={newProductForm.format}
                     onChange={(e) => setNewProductForm({ ...newProductForm, format: e.target.value })}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-slate-300 bg-white text-slate-900 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="Ej: 500ml, 1L, RTU-500 cc, 5L"
                   />
                 </div>
@@ -997,7 +997,7 @@ export default function ProductionModule() {
                   <select
                     value={newProductForm.product_type}
                     onChange={(e) => setNewProductForm({ ...newProductForm, product_type: e.target.value as 'concentrado' | 'sustrato' | 'rtu-gatillo' })}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-slate-300 bg-white text-slate-900 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
                     <option value="concentrado">Concentrado</option>
                     <option value="sustrato">Sustrato</option>
@@ -1015,7 +1015,7 @@ export default function ProductionModule() {
                     type="text"
                     value={newProductForm.color}
                     onChange={(e) => setNewProductForm({ ...newProductForm, color: e.target.value })}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-slate-300 bg-white text-slate-900 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="Ej: Morado, Transparente"
                   />
                 </div>
@@ -1028,7 +1028,7 @@ export default function ProductionModule() {
                     type="text"
                     value={newProductForm.aroma}
                     onChange={(e) => setNewProductForm({ ...newProductForm, aroma: e.target.value })}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-slate-300 bg-white text-slate-900 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="Ej: Lavanda, Limón"
                   />
                 </div>
@@ -1046,7 +1046,7 @@ export default function ProductionModule() {
                     max="14"
                     value={newProductForm.ph_target}
                     onChange={(e) => setNewProductForm({ ...newProductForm, ph_target: e.target.value })}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-slate-300 bg-white text-slate-900 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="Ej: 7.0"
                   />
                 </div>
@@ -1060,7 +1060,7 @@ export default function ProductionModule() {
                     min="1"
                     value={newProductForm.production_unit_liters}
                     onChange={(e) => setNewProductForm({ ...newProductForm, production_unit_liters: parseFloat(e.target.value) || 100 })}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-slate-300 bg-white text-slate-900 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
               </div>
@@ -1075,9 +1075,9 @@ export default function ProductionModule() {
                   min="0"
                   value={newProductForm.base_price}
                   onChange={(e) => setNewProductForm({ ...newProductForm, base_price: parseFloat(e.target.value) || 0 })}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="0.00"
-                />
+                    className="w-full px-4 py-2 border border-slate-300 bg-white text-slate-900 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="0.00"
+                  />
               </div>
 
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">

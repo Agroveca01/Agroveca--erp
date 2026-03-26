@@ -371,7 +371,7 @@ export default function PurchasesModule() {
         {loading ? (
           <div className="p-12 text-center">
             <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[#10b981]"></div>
-            <p className="text-slate-600 mt-4">Cargando compras...</p>
+            <p className="text-slate-300 mt-4">Cargando compras...</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
