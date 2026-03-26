@@ -242,6 +242,7 @@ Convertir `TECH_BACKLOG.md` en tareas concretas, ejecutables y faciles de asigna
 ### ISSUE P2-02 - Agregar red minima de validaciones automatizadas
 
 - `Tipo`: validacion
+- `Estado`: resuelto en baseline; existe una red minima con Vitest para auth recovery, roles/permisos, helpers fiscales y payload selection de Shopify.
 - `Bloquea`: estabilidad futura
 - `Archivos sugeridos`:
   - `src/lib/taxUtils.ts`
