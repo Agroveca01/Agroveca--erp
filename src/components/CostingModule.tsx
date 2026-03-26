@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { TrendingUp, Settings, Save, AlertTriangle, CreditCard as Edit2, X } from 'lucide-react';
+import { calculateEditableMetrics, EditableCostRow, getFormatCostsByProduct } from '../lib/costingHelpers';
 import { supabase, Product, BusinessConfig, FixedCostsConfig, FormatCost } from '../lib/supabase';
 
 interface ProductCostAnalysis {
@@ -45,11 +46,7 @@ export default function CostingModule() {
     shipping_cost: 750,
   });
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
     try {
       const [productsData, configData, costsData, formatCostsData] = await Promise.all([
@@ -89,23 +86,11 @@ export default function CostingModule() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const getFormatCostsByProduct = (product: Product, formats: FormatCost[], fallbackCosts: FixedCostsConfig | null): { container: number; label: number } => {
-    const formatLower = product.format.toLowerCase();
-
-    for (const fc of formats) {
-      const fcNameLower = fc.format_name.toLowerCase();
-      if (formatLower.includes(fcNameLower.replace('cc', '').replace('rtu', '').trim())) {
-        return { container: fc.container_cost, label: fc.label_cost };
-      }
-    }
-
-    return {
-      container: fallbackCosts?.container_cost || 450,
-      label: fallbackCosts?.label_cost || 150
-    };
-  };
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const calculateCostAnalysis = async (
     prods: Product[],
@@ -240,12 +225,7 @@ export default function CostingModule() {
       commission: analysis.commission,
     };
 
-    const totalCost = data.rawMaterialCost + data.containerCost + data.packagingCost + data.labelCost + data.shippingCost;
-    const commission = businessConfig ? (data.basePrice * businessConfig.shopify_commission_pct / 100) : 0;
-    const netProfit = data.basePrice - totalCost - commission;
-    const netMargin = data.basePrice > 0 ? (netProfit / data.basePrice) * 100 : 0;
-
-    return { totalCost, netProfit, netMargin, commission };
+    return calculateEditableMetrics(data as EditableCostRow, businessConfig);
   };
 
   const handleSaveAllChanges = async () => {
