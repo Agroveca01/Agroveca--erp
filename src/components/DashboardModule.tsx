@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { TrendingUp, Package, Target, AlertTriangle, TrendingDown, Calculator, Receipt, Truck, CheckCircle, BarChart3, Download } from 'lucide-react';
-import { supabase, Product, BusinessConfig, SalesOrder, FormatCost, FixedCostsConfig } from '../lib/supabase';
+import { calculateDashboardProductMetrics, getMonthlyRevenueSummary } from '../lib/dashboardFinancialHelpers';
+import { supabase, Product, BusinessConfig, SalesOrder } from '../lib/supabase';
 import { calculateNetFromGross, formatVATPercentage } from '../lib/taxUtils';
 import { generateProductDataSheet } from '../lib/pdfGenerator';
 import ExpirationAlerts from './ExpirationAlerts';
@@ -47,11 +48,7 @@ export default function DashboardModule() {
 
   const DISTRIBUTOR_DISCOUNT = 0.40;
 
-  useEffect(() => {
-    loadDashboardData();
-  }, []);
-
-  const loadDashboardData = async () => {
+  const loadDashboardData = useCallback(async () => {
     setLoading(true);
     try {
       const [productsData, configData, ordersData, formatCostsData, fixedCostsData] = await Promise.all([
@@ -86,60 +83,17 @@ export default function DashboardModule() {
             return total + (cost * recipe.quantity_per_100l);
           }, 0);
 
-          const unitsPerBatch = product.units_per_batch || 1;
-          const rawMaterialCost = unitsPerBatch > 0 ? rawMaterialCostPer100L / unitsPerBatch : rawMaterialCostPer100L;
-
-          const formatCostData = getFormatCostsByProduct(product, formats, costs);
-          const containerCost = formatCostData.container;
-          const labelCost = formatCostData.label;
-          const packagingCost = costs?.packaging_cost || 500;
-          const shippingCost = costs?.shipping_cost || 750;
-
-          const totalProductionCost = rawMaterialCost + containerCost + packagingCost + labelCost;
-
-          const basePriceGross = product.base_price;
-          const basePriceBreakdown = calculateNetFromGross(basePriceGross);
-          const basePriceNet = basePriceBreakdown.net;
-          const basePriceVAT = basePriceBreakdown.vat;
-
-          const shopifyCommissionNet = basePriceNet * 0.05;
-          const shopifyCommissionGross = shopifyCommissionNet * 1.19;
-
-          const realCost = totalProductionCost + shopifyCommissionNet + shippingCost;
-          const netProfitNet = basePriceNet - realCost;
-          const netMarginNet = basePriceNet > 0 ? (netProfitNet / basePriceNet) * 100 : 0;
-
-          const distributorPriceGross = basePriceGross * (1 - DISTRIBUTOR_DISCOUNT);
-          const distributorBreakdown = calculateNetFromGross(distributorPriceGross);
-          const distributorPriceNet = distributorBreakdown.net;
-          const distributorVAT = distributorBreakdown.vat;
-
-          const ctpProfitNetPerUnit = distributorPriceNet - totalProductionCost;
-
-          const vatToReserve = basePriceVAT;
+          const metrics = calculateDashboardProductMetrics(
+            product,
+            rawMaterialCostPer100L,
+            costs,
+            formats,
+            DISTRIBUTOR_DISCOUNT,
+          );
 
           return {
             product,
-            rawMaterialCost,
-            containerCost,
-            packagingCost,
-            labelCost,
-            shippingCost,
-            totalProductionCost,
-            basePriceGross,
-            basePriceNet,
-            basePriceVAT,
-            shopifyCommissionGross,
-            shopifyCommissionNet,
-            realCost,
-            netProfitNet,
-            netMarginNet,
-            distributorPriceGross,
-            distributorPriceNet,
-            distributorVAT,
-            ctpProfitNetPerUnit,
-            vatToReserve,
-            unitsPerBatch,
+            ...metrics,
           };
         })
       );
@@ -150,23 +104,11 @@ export default function DashboardModule() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const getFormatCostsByProduct = (product: Product, formats: FormatCost[], fallbackCosts: FixedCostsConfig | null): { container: number; label: number } => {
-    const formatLower = product.format.toLowerCase();
-
-    for (const fc of formats) {
-      const fcNameLower = fc.format_name.toLowerCase();
-      if (formatLower.includes(fcNameLower.replace('cc', '').replace('rtu', '').trim())) {
-        return { container: fc.container_cost, label: fc.label_cost };
-      }
-    }
-
-    return {
-      container: fallbackCosts?.container_cost || 450,
-      label: fallbackCosts?.label_cost || 150
-    };
-  };
+  useEffect(() => {
+    loadDashboardData();
+  }, [loadDashboardData]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('es-CL', {
@@ -186,15 +128,7 @@ export default function DashboardModule() {
     return 'text-red-400';
   };
 
-  const thisMonth = new Date().getMonth();
-  const thisYear = new Date().getFullYear();
-  const monthlyOrders = orders.filter(order => {
-    const orderDate = new Date(order.order_date);
-    return orderDate.getMonth() === thisMonth && orderDate.getFullYear() === thisYear;
-  });
-
-  const monthlyRevenue = monthlyOrders.reduce((sum, order) => sum + order.total_amount, 0);
-  const monthlyRevenueBreakdown = calculateNetFromGross(monthlyRevenue);
+  const { monthlyOrders, monthlyRevenue, monthlyRevenueBreakdown } = getMonthlyRevenueSummary(orders);
 
   const averageMargin = products.length > 0
     ? products.reduce((sum, p) => sum + p.netMarginNet, 0) / products.length
