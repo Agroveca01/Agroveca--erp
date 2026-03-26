@@ -1,6 +1,11 @@
 import { useState, useEffect } from 'react';
 import { ShoppingBag, Settings, RefreshCw, CheckCircle, XCircle, AlertCircle, DollarSign, TrendingUp } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import {
+  DEFAULT_SHOPIFY_CONFIG_FORM,
+  getShopifyOrdersSummary,
+  mapShopifyConfigToForm,
+} from '../lib/shopifyIntegrationHelpers';
 import { getShopifyStockSyncPayloads } from '../lib/shopifySync';
 import { useAuth } from '../contexts/useAuth';
 
@@ -43,14 +48,7 @@ export default function ShopifyIntegrationModule() {
   const [syncLogs, setSyncLogs] = useState<SyncLog[]>([]);
   const [shopifyOrders, setShopifyOrders] = useState<ShopifyOrder[]>([]);
   const [showConfig, setShowConfig] = useState(false);
-  const [configForm, setConfigForm] = useState({
-    shop_domain: '',
-    access_token: '',
-    api_version: '2024-01',
-    webhook_secret: '',
-    commission_percentage: 2.0,
-    payment_gateway_fee: 2.5,
-  });
+  const [configForm, setConfigForm] = useState(DEFAULT_SHOPIFY_CONFIG_FORM);
 
   useEffect(() => {
     loadConfig();
@@ -72,14 +70,7 @@ export default function ShopifyIntegrationModule() {
 
       if (data) {
         setConfig(data);
-        setConfigForm({
-          shop_domain: data.shop_domain,
-          access_token: data.access_token || '',
-          api_version: data.api_version,
-          webhook_secret: data.webhook_secret || '',
-          commission_percentage: data.commission_percentage,
-          payment_gateway_fee: data.payment_gateway_fee,
-        });
+        setConfigForm(mapShopifyConfigToForm(data));
       }
     } catch (error) {
       console.error('Error loading config:', error);
@@ -235,10 +226,7 @@ export default function ShopifyIntegrationModule() {
     );
   }
 
-  const totalOrders = shopifyOrders.length;
-  const totalRevenue = shopifyOrders.reduce((sum, order) => sum + order.total_amount, 0);
-  const totalCommissions = shopifyOrders.reduce((sum, order) => sum + order.commission_amount, 0);
-  const totalNet = shopifyOrders.reduce((sum, order) => sum + order.net_amount, 0);
+  const { totalOrders, totalRevenue, totalCommissions, totalNet } = getShopifyOrdersSummary(shopifyOrders);
 
   return (
     <div className="space-y-6">
