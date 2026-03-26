@@ -1,6 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Plus, TrendingDown, Package, DollarSign, CheckCircle } from 'lucide-react';
 import { supabase, Purchase, PackagingInventory } from '../lib/supabase';
+import {
+  findPackagingInventoryMatch,
+  getPurchaseMonthSummary,
+  normalizeInventoryFormat,
+} from '../lib/purchasesHelpers';
 import { calculateNetFromGross } from '../lib/taxUtils';
 
 const DEFAULT_FORM_STATE = {
@@ -48,7 +53,7 @@ export default function PurchasesModule() {
 
     const totalGross = formData.quantity * formData.unit_price_gross;
     const breakdown = calculateNetFromGross(totalGross);
-    const normalizedFormat = formData.format.trim() || null;
+    const normalizedFormat = normalizeInventoryFormat(formData.format);
     const unitCostNet = formData.quantity > 0 ? breakdown.net / formData.quantity : 0;
 
     try {
@@ -73,11 +78,11 @@ export default function PurchasesModule() {
 
       if (error) throw error;
 
-      const existingItem = packagingInventory.find(
-        (item) =>
-          item.item_type === formData.item_type &&
-          item.item_name === formData.item_name &&
-          (item.format || null) === normalizedFormat
+      const existingItem = findPackagingInventoryMatch(
+        packagingInventory,
+        formData.item_type,
+        formData.item_name,
+        normalizedFormat,
       );
 
       let packagingInventoryId = existingItem?.id || null;
@@ -147,15 +152,7 @@ export default function PurchasesModule() {
     }).format(amount);
   };
 
-  const thisMonth = new Date().getMonth();
-  const thisYear = new Date().getFullYear();
-  const monthlyPurchases = purchases.filter((purchase) => {
-    const purchaseDate = new Date(purchase.purchase_date);
-    return purchaseDate.getMonth() === thisMonth && purchaseDate.getFullYear() === thisYear;
-  });
-
-  const totalVatCredit = monthlyPurchases.reduce((sum, p) => sum + p.vat_credit, 0);
-  const totalSpent = monthlyPurchases.reduce((sum, p) => sum + p.total_gross, 0);
+  const { monthlyPurchases, totalVatCredit, totalSpent } = getPurchaseMonthSummary(purchases);
 
   const totalGross = formData.quantity * formData.unit_price_gross;
   const previewBreakdown = calculateNetFromGross(totalGross);

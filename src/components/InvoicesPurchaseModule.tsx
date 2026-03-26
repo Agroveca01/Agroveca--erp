@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Plus, Trash2, Save } from 'lucide-react';
 import { supabase, Supplier, PackagingInventory, PurchaseInvoice } from '../lib/supabase';
+import { findPackagingInventoryMatch, normalizeInventoryFormat } from '../lib/purchasesHelpers';
 
 interface InvoiceLineItem {
   item_type: string;
@@ -23,8 +24,6 @@ const EMPTY_LINE_ITEM: InvoiceLineItem = {
   line_total_net: 0,
   packaging_inventory_id: null,
 };
-
-const normalizeFormat = (format: string | null | undefined) => format?.trim() || null;
 
 export default function InvoicesPurchaseModule() {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
@@ -85,12 +84,11 @@ export default function InvoicesPurchaseModule() {
     }
 
     if (field === 'item_type' || field === 'item_name' || field === 'format') {
-      const normalizedLineFormat = normalizeFormat(newLineItems[index].format);
-      const matchingInventory = inventory.find(
-        (item) =>
-          item.item_type === newLineItems[index].item_type &&
-          item.item_name === newLineItems[index].item_name &&
-          normalizeFormat(item.format) === normalizedLineFormat
+      const matchingInventory = findPackagingInventoryMatch(
+        inventory,
+        newLineItems[index].item_type,
+        newLineItems[index].item_name,
+        newLineItems[index].format,
       );
       newLineItems[index].packaging_inventory_id = matchingInventory?.id || null;
     }
@@ -135,17 +133,12 @@ export default function InvoicesPurchaseModule() {
       const inventoryResolvedItems: InvoiceLineItem[] = [];
 
       for (const item of lineItems.filter((lineItem) => lineItem.quantity > 0)) {
-        const normalizedFormat = normalizeFormat(item.format);
+        const normalizedFormat = normalizeInventoryFormat(item.format);
 
         let packagingInventoryId = item.packaging_inventory_id;
         let existingItem = packagingInventoryId
           ? inventory.find((inv) => inv.id === packagingInventoryId)
-          : inventory.find(
-              (inv) =>
-                inv.item_type === item.item_type &&
-                inv.item_name === item.item_name &&
-                normalizeFormat(inv.format) === normalizedFormat
-            );
+          : findPackagingInventoryMatch(inventory, item.item_type, item.item_name, normalizedFormat);
 
         if (!existingItem) {
           const { data: newInventoryItem, error: inventoryInsertError } = await supabase
@@ -206,7 +199,7 @@ export default function InvoicesPurchaseModule() {
           invoice_id: invoice.id,
           item_type: item.item_type,
           item_name: item.item_name,
-          format: normalizeFormat(item.format),
+          format: normalizeInventoryFormat(item.format),
           quantity: item.quantity,
           unit_price_net: item.unit_price_net,
           line_total_net: item.line_total_net,
