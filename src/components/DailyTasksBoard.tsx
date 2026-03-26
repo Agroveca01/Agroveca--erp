@@ -1,6 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { CheckSquare, Square, AlertTriangle, Clock, TrendingUp } from 'lucide-react';
 import { calculateTaskCompletionRate, splitTasksByCriticality } from '../lib/dashboardHelpers';
+import {
+  buildCompletionSet,
+  formatBoardDate,
+  getTodayIsoDate,
+  isDailyBoardEmpty,
+  markTaskCompleted,
+} from '../lib/dailyTasksHelpers';
 import { supabase, DailyTask } from '../lib/supabase';
 import { useAuth } from '../contexts/useAuth';
 
@@ -11,7 +18,7 @@ export default function DailyTasksBoard() {
 
   const loadTasks = useCallback(async () => {
     try {
-      const today = new Date().toISOString().split('T')[0];
+      const today = getTodayIsoDate();
 
       const [tasksData, completionsData] = await Promise.all([
         supabase
@@ -29,7 +36,7 @@ export default function DailyTasksBoard() {
       ]);
 
       setTasks(tasksData.data || []);
-      setCompletions(new Set((completionsData.data || []).map((c) => c.task_id)));
+      setCompletions(buildCompletionSet(completionsData.data || []));
     } catch (error) {
       console.error('Error loading tasks:', error);
     }
@@ -49,11 +56,11 @@ export default function DailyTasksBoard() {
         {
           task_id: taskId,
           completed_by: user?.id,
-          completion_date: new Date().toISOString().split('T')[0],
+          completion_date: getTodayIsoDate(),
         },
       ]);
 
-      setCompletions(new Set(completions).add(taskId));
+      setCompletions(markTaskCompleted(completions, taskId));
     } catch (error) {
       console.error('Error completing task:', error);
     }
@@ -68,7 +75,7 @@ export default function DailyTasksBoard() {
         <div>
           <h3 className="text-xl font-bold text-white">Tablero de Pendientes Diarios</h3>
           <p className="text-slate-400 text-sm mt-1">
-            {new Date().toLocaleDateString('es-CL', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+            {formatBoardDate()}
           </p>
         </div>
         <div className="flex items-center space-x-3">
@@ -148,7 +155,7 @@ export default function DailyTasksBoard() {
           <h4 className="font-bold text-white">Tareas del Día</h4>
         </div>
         <div className="space-y-2">
-          {normalTasks.length === 0 && criticalTasks.length === 0 && (
+          {isDailyBoardEmpty(criticalTasks, normalTasks) && (
             <div className="text-center py-8">
               <CheckSquare className="w-12 h-12 text-slate-600 mx-auto mb-3" />
               <p className="text-slate-400">No hay tareas pendientes</p>
