@@ -155,7 +155,7 @@ Deno.serve(async (req: Request) => {
 
     const shopifyUrl = `https://${config.shop_domain}/admin/api/${config.api_version}/inventory_levels/set.json`;
 
-    const { data: inventoryData, error: inventoryError } = await supabase
+    const { data: inventoryData } = await supabase
       .from("products")
       .select("stock_quantity")
       .eq("id", product_id)

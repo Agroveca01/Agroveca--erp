@@ -261,7 +261,7 @@ Deno.serve(async (req: Request) => {
   try {
     const payload: VIPEmailPayload = await req.json();
 
-    const { customer_id, customer_name, customer_email, discount_code, discount_code_id } = payload;
+    const { customer_id, customer_name, customer_email, discount_code } = payload;
 
     if (!customer_id || !customer_email || !discount_code) {
       return new Response(
