@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Bell, AlertTriangle, Info, CheckCircle, Plus, X } from 'lucide-react';
 import { supabase, SystemAnnouncement } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
@@ -19,13 +19,7 @@ export default function AnnouncementWall() {
     return error instanceof Error ? error.message : 'Error al crear aviso';
   };
 
-  useEffect(() => {
-    if (user) {
-      loadData();
-    }
-  }, [user]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       const [announcementsData, readsData] = await Promise.all([
         supabase
@@ -42,7 +36,13 @@ export default function AnnouncementWall() {
     } catch (error) {
       console.error('Error loading announcements:', error);
     }
-  };
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (user) {
+      loadData();
+    }
+  }, [user, loadData]);
 
   const markAsRead = async (announcementId: string) => {
     if (reads.has(announcementId)) return;

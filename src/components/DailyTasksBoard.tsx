@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { CheckSquare, Square, AlertTriangle, Clock, TrendingUp } from 'lucide-react';
 import { supabase, DailyTask } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
@@ -8,13 +8,7 @@ export default function DailyTasksBoard() {
   const [tasks, setTasks] = useState<DailyTask[]>([]);
   const [completions, setCompletions] = useState<Set<string>>(new Set());
 
-  useEffect(() => {
-    if (user && profile) {
-      loadTasks();
-    }
-  }, [user, profile]);
-
-  const loadTasks = async () => {
+  const loadTasks = useCallback(async () => {
     try {
       const today = new Date().toISOString().split('T')[0];
 
@@ -38,7 +32,13 @@ export default function DailyTasksBoard() {
     } catch (error) {
       console.error('Error loading tasks:', error);
     }
-  };
+  }, [profile?.role, user?.id]);
+
+  useEffect(() => {
+    if (user && profile) {
+      loadTasks();
+    }
+  }, [user, profile, loadTasks]);
 
   const toggleTask = async (taskId: string) => {
     if (completions.has(taskId)) return;

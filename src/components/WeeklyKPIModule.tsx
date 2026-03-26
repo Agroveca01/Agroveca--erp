@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Award, TrendingUp, Users, Download, Calendar } from 'lucide-react';
 import { supabase, WeeklyKPI, ActivityLog } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
@@ -8,13 +8,7 @@ export default function WeeklyKPIModule() {
   const [kpis, setKpis] = useState<WeeklyKPI[]>([]);
   const [activities, setActivities] = useState<ActivityLog[]>([]);
 
-  useEffect(() => {
-    if (user) {
-      loadData();
-    }
-  }, [user]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       const weekStart = getWeekStart(new Date());
       const weekEnd = getWeekEnd(new Date());
@@ -39,7 +33,13 @@ export default function WeeklyKPIModule() {
     } catch (error) {
       console.error('Error loading KPIs:', error);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (user) {
+      loadData();
+    }
+  }, [user, loadData]);
 
   const getWeekStart = (date: Date) => {
     const d = new Date(date);
