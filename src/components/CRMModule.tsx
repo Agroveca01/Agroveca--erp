@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Users, TrendingUp, Gift, Leaf, Mail, Phone, MapPin, DollarSign, ShoppingBag, Award, Search, Plus, X, Ticket, Calendar, Check, Send, Eye } from 'lucide-react';
+import { getCRMSummary } from '../lib/crmHelpers';
 import { supabase } from '../lib/supabase';
 import VIPEmailPreview from './VIPEmailPreview';
 
@@ -222,22 +223,14 @@ export default function CRMModule() {
     return 'border-[#10b981]/20';
   };
 
-  const filteredCustomers = customers.filter(customer =>
-    customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    customer.email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const topCustomers = customers.slice(0, 5);
-  const totalLTV = customers.reduce((sum, c) => sum + Number(c.total_spent), 0);
-  const avgLTV = customers.length > 0 ? totalLTV / customers.length : 0;
-
-  const tierDistribution = {
-    brote: customers.filter(c => c.loyalty_tier === 1).length,
-    crecimiento: customers.filter(c => c.loyalty_tier === 2).length,
-    bosque: customers.filter(c => c.loyalty_tier === 3).length
-  };
-
-  const maxTierCount = Math.max(tierDistribution.brote, tierDistribution.crecimiento, tierDistribution.bosque, 1);
+  const {
+    filteredCustomers,
+    topCustomers,
+    totalLTV,
+    avgLTV,
+    tierDistribution,
+    maxTierCount,
+  } = getCRMSummary(customers, searchTerm);
 
   return (
     <div className="space-y-6 bg-slate-950 min-h-screen p-6">
