@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { AlertTriangle, CheckCircle, Clock, DollarSign, Calendar as CalendarIcon } from 'lucide-react';
 import { supabase, AccountsPayable } from '../lib/supabase';
+import { getPayableStatus, getPayablesSummary } from '../lib/accountsPayableHelpers';
 
 export default function AccountsPayableModule() {
   const [payables, setPayables] = useState<AccountsPayable[]>([]);
@@ -67,21 +68,7 @@ export default function AccountsPayableModule() {
     }).format(amount);
   };
 
-  const getDaysUntilDue = (dueDate: string) => {
-    const today = new Date();
-    const due = new Date(dueDate);
-    const diffTime = due.getTime() - today.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays;
-  };
-
-  const pendingPayables = payables.filter((p) => p.status === 'pending');
-  const totalDebt = pendingPayables.reduce((sum, p) => sum + p.amount_due, 0);
-  const overduePayables = pendingPayables.filter((p) => getDaysUntilDue(p.due_date) < 0);
-  const dueSoonPayables = pendingPayables.filter((p) => {
-    const days = getDaysUntilDue(p.due_date);
-    return days >= 0 && days <= 5;
-  });
+  const { pendingPayables, totalDebt, overduePayables, dueSoonPayables, currentPayables } = getPayablesSummary(payables);
 
   return (
     <div className="space-y-6">
@@ -124,7 +111,7 @@ export default function AccountsPayableModule() {
             <CheckCircle className="w-6 h-6 text-green-300" />
           </div>
           <p className="text-3xl font-bold text-white">
-            {pendingPayables.length - overduePayables.length - dueSoonPayables.length}
+            {currentPayables.length}
           </p>
           <p className="text-sm text-green-200 mt-1">0-30 días</p>
         </div>
@@ -163,9 +150,8 @@ export default function AccountsPayableModule() {
             </thead>
             <tbody className="bg-white divide-y divide-slate-200">
               {pendingPayables.map((payable) => {
-                const daysUntilDue = getDaysUntilDue(payable.due_date);
-                const isOverdue = daysUntilDue < 0;
-                const isDueSoon = daysUntilDue >= 0 && daysUntilDue <= 5;
+                const payableStatus = getPayableStatus(payable.due_date);
+                const { isOverdue, isDueSoon, label, tone } = payableStatus;
 
                 return (
                   <tr
@@ -181,12 +167,10 @@ export default function AccountsPayableModule() {
                           </div>
                           <div
                             className={`text-xs font-semibold ${
-                              isOverdue ? 'text-red-600' : isDueSoon ? 'text-yellow-600' : 'text-green-600'
+                              tone === 'overdue' ? 'text-red-600' : tone === 'due-soon' ? 'text-yellow-600' : 'text-green-600'
                             }`}
                           >
-                            {isOverdue
-                              ? `Vencida hace ${Math.abs(daysUntilDue)} días`
-                              : `Vence en ${daysUntilDue} días`}
+                            {label.replace('dias', 'días')}
                           </div>
                         </div>
                       </div>
@@ -203,14 +187,14 @@ export default function AccountsPayableModule() {
                     <td className="px-6 py-4 whitespace-nowrap text-center">
                       <span
                         className={`px-3 py-1 text-xs font-semibold rounded-full ${
-                          isOverdue
+                          tone === 'overdue'
                             ? 'bg-red-100 text-red-800'
-                            : isDueSoon
+                            : tone === 'due-soon'
                               ? 'bg-yellow-100 text-yellow-800'
                               : 'bg-green-100 text-green-800'
                         }`}
                       >
-                        {isOverdue ? 'Vencida' : isDueSoon ? 'Por vencer' : 'Vigente'}
+                        {tone === 'overdue' ? 'Vencida' : tone === 'due-soon' ? 'Por vencer' : 'Vigente'}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-center">
