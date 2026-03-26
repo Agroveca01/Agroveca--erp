@@ -12,6 +12,8 @@ interface InvoiceLineItem {
   packaging_inventory_id: string | null;
 }
 
+type InvoiceLineItemValue = InvoiceLineItem[keyof InvoiceLineItem];
+
 const EMPTY_LINE_ITEM: InvoiceLineItem = {
   item_type: 'envase',
   item_name: '',
@@ -38,6 +40,10 @@ export default function InvoicesPurchaseModule() {
   const [notes, setNotes] = useState('');
 
   const [lineItems, setLineItems] = useState<InvoiceLineItem[]>([EMPTY_LINE_ITEM]);
+
+  const getErrorMessage = (error: unknown) => {
+    return error instanceof Error ? error.message : 'Error al guardar la factura';
+  };
 
   useEffect(() => {
     loadData();
@@ -70,7 +76,7 @@ export default function InvoicesPurchaseModule() {
     setLineItems(lineItems.filter((_, i) => i !== index));
   };
 
-  const updateLineItem = (index: number, field: keyof InvoiceLineItem, value: any) => {
+  const updateLineItem = (index: number, field: keyof InvoiceLineItem, value: InvoiceLineItemValue) => {
     const newLineItems = [...lineItems];
     newLineItems[index] = { ...newLineItems[index], [field]: value };
 
@@ -228,9 +234,9 @@ export default function InvoicesPurchaseModule() {
       setShowForm(false);
       resetForm();
       loadData();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error saving invoice:', error);
-      alert(error.message || 'Error al guardar la factura');
+      alert(getErrorMessage(error));
     }
   };
 

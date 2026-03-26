@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { ShoppingBag, Plus, TrendingUp, Calendar, DollarSign, Star, Gift, Users } from 'lucide-react';
 import { supabase, Product, SalesOrder, BusinessConfig } from '../lib/supabase';
 
+type SalesChannel = 'shopify' | 'direct' | 'wholesale' | 'other';
+
 export default function SalesModule() {
   const [orders, setOrders] = useState<(SalesOrder & { products?: Product })[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -13,7 +15,7 @@ export default function SalesModule() {
   const [orderForm, setOrderForm] = useState({
     product_id: '',
     quantity: 1,
-    channel: 'shopify' as 'shopify' | 'direct' | 'wholesale' | 'other',
+    channel: 'shopify' as SalesChannel,
     notes: '',
   });
   const [showSimulator, setShowSimulator] = useState(false);
@@ -23,6 +25,10 @@ export default function SalesModule() {
     returningCustomers: 50,
     vipDiscountRate: 0.10,
   });
+
+  const isSalesChannel = (value: string): value is SalesChannel => {
+    return ['shopify', 'direct', 'wholesale', 'other'].includes(value);
+  };
 
   useEffect(() => {
     loadData();
@@ -417,7 +423,10 @@ export default function SalesModule() {
                 </label>
                 <select
                   value={orderForm.channel}
-                  onChange={(e) => setOrderForm({ ...orderForm, channel: e.target.value as any })}
+                  onChange={(e) => {
+                    if (!isSalesChannel(e.target.value)) return;
+                    setOrderForm({ ...orderForm, channel: e.target.value });
+                  }}
                   className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 >
                   <option value="shopify">Shopify</option>
