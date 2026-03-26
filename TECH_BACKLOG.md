@@ -14,6 +14,9 @@ Traducir los riesgos y gaps detectados en `PRD.md` en un backlog tecnico acciona
 
 ### 1. Recuperar salud de compilacion TypeScript
 
+**Estado**
+- Resuelto: `npm run typecheck` es criterio de merge y hoy corre en verde.
+
 **Problema**
 - `npm run typecheck` falla con errores reales de dominio, tipos desalineados y multiples advertencias por codigo muerto.
 
@@ -39,6 +42,9 @@ Traducir los riesgos y gaps detectados en `PRD.md` en un backlog tecnico acciona
 - Los tipos compartidos reflejan el schema real y el uso actual del frontend.
 
 ### 2. Normalizar roles y permisos entre UI, auth y base de datos
+
+**Estado**
+- Resuelto en baseline: la app opera con `admin`, `operario` y `vendedor`, y los aliases legacy quedaron absorbidos por helpers de normalizacion.
 
 **Problema**
 - El producto usa `admin`, `operario` y `vendedor` en UI, pero hay evidencia de variantes historicas como `operator` y `ADMIN`.
@@ -88,6 +94,10 @@ Traducir los riesgos y gaps detectados en `PRD.md` en un backlog tecnico acciona
 
 ### 4. Alinear modelo de dominio de productos, ventas y finanzas con el schema real
 
+**Estado**
+- Resuelto en baseline: se corrigieron desalineaciones clave de contratos y tipos para que dashboards y modulos usen campos reales.
+- Pendiente parcial: seguir ajustando contratos compartidos a medida que crezcan nuevos flujos o reportes.
+
 **Problema**
 - Hay referencias a campos inexistentes o con distinto nombre, como `product_name`, `sales_channel`, `customer_id` y `total_items`.
 
@@ -110,6 +120,9 @@ Traducir los riesgos y gaps detectados en `PRD.md` en un backlog tecnico acciona
 - Los calculos financieros y documentos imprimibles usan datos reales.
 
 ### 5. Endurecer seguridad de integracion Shopify
+
+**Estado**
+- Resuelto en baseline: webhook con validacion real de HMAC, `shop_domain` validado y stock sync con auth/rol real.
 
 **Problema**
 - El webhook lee el HMAC pero no valida efectivamente la firma; ademas el modelo de invocacion del sync de stock merece revisarse.
@@ -135,6 +148,9 @@ Traducir los riesgos y gaps detectados en `PRD.md` en un backlog tecnico acciona
 
 ### 6. Cerrar correctamente el flujo compra -> inventario de empaque
 
+**Estado**
+- Resuelto en baseline: compras e invoices ya crean/actualizan `packaging_inventory` y registran movimientos asociados.
+
 **Problema**
 - `PurchasesModule` actualiza `packaging_inventory` solo si el item ya existe y no cubre bien altas nuevas.
 
@@ -154,6 +170,10 @@ Traducir los riesgos y gaps detectados en `PRD.md` en un backlog tecnico acciona
 - El stock posterior coincide con la compra registrada.
 
 ### 7. Consolidar el modelo de produccion entre modulos
+
+**Estado**
+- Resuelto en baseline: `ProductionSheetModule` y los lifecycle fields quedaron alineados con batches y orders.
+- Pendiente parcial: seguir vigilando que nuevas iteraciones no reabran divergencias entre modulos.
 
 **Problema**
 - `ProductionModule` y `ProductionSheetModule` parecen modelar produccion/lotes con supuestos distintos.
@@ -177,6 +197,10 @@ Traducir los riesgos y gaps detectados en `PRD.md` en un backlog tecnico acciona
 
 ### 8. Volver real o marcar explicitamente como parcial el flujo VIP por email
 
+**Estado**
+- Resuelto en baseline: el flujo quedo explicitamente comunicado como preview/simulacion, no como envio real.
+- Pendiente funcional: integrar proveedor real solo si el roadmap vuelve a priorizar email operativo.
+
 **Problema**
 - La edge function de email VIP devuelve exito mock sin evidencia de envio real.
 
@@ -196,6 +220,9 @@ Traducir los riesgos y gaps detectados en `PRD.md` en un backlog tecnico acciona
 - El sistema envia correo real con trazabilidad o comunica claramente que solo genera preview.
 
 ### 9. Rehacer la capa de salud financiera sobre datos confiables
+
+**Estado**
+- Resuelto en baseline: el dashboard fue degradado/replanteado para usar solo metricas soportadas por datos reales.
 
 **Problema**
 - `FinancialHealthModule` depende de tipos y campos no alineados con la fuente real.
@@ -288,6 +315,14 @@ Traducir los riesgos y gaps detectados en `PRD.md` en un backlog tecnico acciona
 
 ## Orden recomendado de ejecucion
 
+**Estado del backlog hoy**
+- P0: cerrado en baseline.
+- P1: cerrado en baseline para MVP operativo.
+- P2-01: resuelto.
+- P2-02: resuelto en baseline.
+- P2-03: resuelto en baseline.
+- Siguiente foco recomendado: ampliar cobertura automatizada mas alla del baseline en inventario/produccion y mantener backlog/documentacion sincronizados.
+
 1. P0.1 Salud de compilacion TypeScript
 2. P0.2 Normalizacion de roles
 3. P0.3 Cliente y tipos Supabase unificados
@@ -297,9 +332,9 @@ Traducir los riesgos y gaps detectados en `PRD.md` en un backlog tecnico acciona
 7. P1.7 Consolidacion de produccion
 8. P1.8 Flujo VIP real o explicitamente parcial
 9. P1.9 Salud financiera confiable
-10. P2.10 Limpieza de ruido tecnico
-11. P2.11 Validaciones automatizadas minimas
-12. P2.12 Alineacion continua de documentacion
+10. P2.11 Validaciones automatizadas minimas
+11. P2.12 Alineacion continua de documentacion
+12. Nuevo bloque funcional o de trazabilidad segun roadmap vigente
 
 ## Resultado esperado
 

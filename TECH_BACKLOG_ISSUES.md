@@ -16,6 +16,7 @@ Convertir `TECH_BACKLOG.md` en tareas concretas, ejecutables y faciles de asigna
 ### ISSUE P0-01 - Corregir contratos de tipos en auth e inventario
 
 - `Tipo`: bug / alineacion de tipos
+- `Estado`: resuelto en baseline; auth, inventario y permisos quedaron alineados y el typecheck hoy corre en verde.
 - `Bloquea`: `P0-02`, `P0-03`, `P1-09`
 - `Archivos`:
   - `src/contexts/AuthContext.tsx`
@@ -36,6 +37,7 @@ Convertir `TECH_BACKLOG.md` en tareas concretas, ejecutables y faciles de asigna
 ### ISSUE P0-02 - Unificar nomenclatura de roles en frontend y schema
 
 - `Tipo`: alineacion de dominio
+- `Estado`: resuelto en baseline; la app opera con roles canonicos y helpers para aliases legacy.
 - `Bloquea`: permisos, tareas por rol, avisos, KPIs
 - `Archivos`:
   - `src/App.tsx`
@@ -75,6 +77,7 @@ Convertir `TECH_BACKLOG.md` en tareas concretas, ejecutables y faciles de asigna
 ### ISSUE P0-04 - Corregir desalineacion de campos de producto, ventas y cliente
 
 - `Tipo`: bug / alineacion de datos
+- `Estado`: resuelto en baseline; contratos y accesos clave ya fueron alineados a campos reales del dominio.
 - `Bloquea`: `P1-09`, reportes, PDFs
 - `Archivos`:
   - `src/lib/pdfGenerator.ts`
@@ -94,6 +97,7 @@ Convertir `TECH_BACKLOG.md` en tareas concretas, ejecutables y faciles de asigna
 ### ISSUE P0-05 - Reparar errores de dominio en produccion y costing
 
 - `Tipo`: bug
+- `Estado`: resuelto en baseline; produccion y costing quedaron corregidos dentro del cierre de typecheck y alineacion de modelos.
 - `Bloquea`: cierre de `typecheck`
 - `Archivos`:
   - `src/components/ProductionModule.tsx`
@@ -110,6 +114,7 @@ Convertir `TECH_BACKLOG.md` en tareas concretas, ejecutables y faciles de asigna
 ### ISSUE P0-06 - Endurecer validacion del webhook de Shopify
 
 - `Tipo`: seguridad
+- `Estado`: resuelto en baseline; webhook endurecido y stock sync autenticado con roles reales.
 - `Bloquea`: rollout serio de integracion Shopify
 - `Archivos`:
   - `supabase/functions/shopify-webhook/index.ts`
@@ -128,6 +133,7 @@ Convertir `TECH_BACKLOG.md` en tareas concretas, ejecutables y faciles de asigna
 ### ISSUE P0-07 - Cerrar `typecheck` limpiando errores prioritarios y luego ruido tecnico
 
 - `Tipo`: calidad / estabilizacion
+- `Estado`: resuelto; `typecheck` esta en verde y el ruido tecnico posterior quedo absorbido por `P2-01`.
 - `Bloquea`: cualquier trabajo seguro sobre el frontend
 - `Archivos`:
   - `src/components/*`
@@ -147,6 +153,7 @@ Convertir `TECH_BACKLOG.md` en tareas concretas, ejecutables y faciles de asigna
 ### ISSUE P1-01 - Completar flujo compra -> alta/actualizacion de packaging inventory
 
 - `Tipo`: bug operativo
+- `Estado`: resuelto en baseline; compras e invoices ya dejan stock y movimientos consistentes.
 - `Bloquea`: stock confiable de materiales de empaque
 - `Archivos`:
   - `src/components/PurchasesModule.tsx`
@@ -163,6 +170,7 @@ Convertir `TECH_BACKLOG.md` en tareas concretas, ejecutables y faciles de asigna
 ### ISSUE P1-02 - Definir modelo unico para ordenes y lotes de produccion
 
 - `Tipo`: arquitectura / alineacion de dominio
+- `Estado`: resuelto en baseline; orders, batches y lifecycle metadata quedaron conectados en el flujo actual.
 - `Bloquea`: trazabilidad de produccion y costos
 - `Archivos`:
   - `src/components/ProductionModule.tsx`
@@ -181,6 +189,7 @@ Convertir `TECH_BACKLOG.md` en tareas concretas, ejecutables y faciles de asigna
 ### ISSUE P1-03 - Hacer real o explicitar como simulacion el envio de email VIP
 
 - `Tipo`: integracion / producto
+- `Estado`: resuelto en baseline; el sistema comunica explicitamente que hoy opera como preview/simulacion.
 - `Bloquea`: confiabilidad del CRM VIP
 - `Archivos`:
   - `supabase/functions/send-vip-email/index.ts`
@@ -197,6 +206,7 @@ Convertir `TECH_BACKLOG.md` en tareas concretas, ejecutables y faciles de asigna
 ### ISSUE P1-04 - Replantear `FinancialHealthModule` con metricas soportadas por datos reales
 
 - `Tipo`: bug / analitica
+- `Estado`: resuelto en baseline; el modulo fue replanteado para usar solo metricas sustentadas por datos reales.
 - `Bloquea`: uso confiable del dashboard financiero
 - `Archivos`:
   - `src/components/FinancialHealthModule.tsx`
@@ -282,9 +292,6 @@ Convertir `TECH_BACKLOG.md` en tareas concretas, ejecutables y faciles de asigna
 
 Si hay que convertir esto en trabajo inmediato, el siguiente sprint deberia incluir:
 
-1. `P0-01` Corregir contratos de tipos en auth e inventario.
-2. `P0-02` Unificar nomenclatura de roles.
-3. `P0-03` Consolidar cliente Supabase y exports tipados.
-4. `P0-04` Corregir desalineacion de campos de producto, ventas y cliente.
-5. `P0-06` Endurecer validacion del webhook de Shopify.
-6. `P0-07` Cerrar `typecheck`.
+1. Extender `P2-02` con cobertura automatizada sobre inventario y produccion.
+2. Mantener `P2-03` como disciplina continua despues de cada bloque mergeado.
+3. Abrir un nuevo bloque funcional o de trazabilidad segun prioridad de producto.
