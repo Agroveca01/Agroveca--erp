@@ -1,8 +1,13 @@
 import { useState, useEffect } from 'react';
 import { ShoppingBag, Plus, TrendingUp, Calendar, DollarSign, Star, Gift, Users } from 'lucide-react';
+import {
+  calculateSalesSimulation,
+  getChannelColor,
+  getSalesDashboardSummary,
+  isSalesChannel,
+  SalesChannel,
+} from '../lib/salesHelpers';
 import { supabase, Product, SalesOrder, BusinessConfig } from '../lib/supabase';
-
-type SalesChannel = 'shopify' | 'direct' | 'wholesale' | 'other';
 
 export default function SalesModule() {
   const [orders, setOrders] = useState<(SalesOrder & { products?: Product })[]>([]);
@@ -25,10 +30,6 @@ export default function SalesModule() {
     returningCustomers: 50,
     vipDiscountRate: 0.10,
   });
-
-  const isSalesChannel = (value: string): value is SalesChannel => {
-    return ['shopify', 'direct', 'wholesale', 'other'].includes(value);
-  };
 
   useEffect(() => {
     loadData();
@@ -168,48 +169,14 @@ export default function SalesModule() {
     }).format(amount);
   };
 
-  const getChannelColor = (channel: string) => {
-    const colors: Record<string, string> = {
-      shopify: 'bg-green-100 text-green-700',
-      direct: 'bg-blue-100 text-blue-700',
-      wholesale: 'bg-purple-100 text-purple-700',
-      other: 'bg-slate-100 text-slate-700',
-    };
-    return colors[channel] || 'bg-slate-100 text-slate-700';
-  };
-
-  const totalRevenue = orders.reduce((sum, order) => sum + order.total_amount, 0);
-  const totalOrders = orders.length;
-  const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
-  const totalCommissions = orders.reduce((sum, order) => sum + order.commission, 0);
-
-  const thisMonth = new Date().getMonth();
-  const thisYear = new Date().getFullYear();
-  const monthlyOrders = orders.filter(order => {
-    const orderDate = new Date(order.order_date);
-    return orderDate.getMonth() === thisMonth && orderDate.getFullYear() === thisYear;
-  });
-  const monthlyRevenue = monthlyOrders.reduce((sum, order) => sum + order.total_amount, 0);
-
-  const calculateSimulation = () => {
-    const newRevenue = simulatorData.avgOrderValue * simulatorData.newCustomers;
-    const returningRevenue = simulatorData.avgOrderValue * simulatorData.returningCustomers;
-    const vipDiscountImpact = returningRevenue * simulatorData.vipDiscountRate * 0.20;
-    const netReturningRevenue = returningRevenue - vipDiscountImpact;
-    const totalRevenue = newRevenue + netReturningRevenue;
-    const totalOrders = simulatorData.newCustomers + simulatorData.returningCustomers;
-    const avgDiscount = totalOrders > 0 ? (vipDiscountImpact / totalRevenue) * 100 : 0;
-
-    return {
-      newRevenue,
-      returningRevenue,
-      vipDiscountImpact,
-      netReturningRevenue,
-      totalRevenue,
-      totalOrders,
-      avgDiscount,
-    };
-  };
+  const {
+    totalRevenue,
+    totalOrders,
+    averageOrderValue,
+    totalCommissions,
+    monthlyOrders,
+    monthlyRevenue,
+  } = getSalesDashboardSummary(orders);
 
   return (
     <div className="space-y-6">
@@ -582,7 +549,7 @@ export default function SalesModule() {
             </div>
 
             {(() => {
-              const simulation = calculateSimulation();
+              const simulation = calculateSalesSimulation(simulatorData);
               return (
                 <div className="space-y-4">
                   <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-6 border border-blue-200">
