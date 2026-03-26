@@ -15,6 +15,10 @@ export default function AnnouncementWall() {
     target_role: '',
   });
 
+  const getErrorMessage = (error: unknown) => {
+    return error instanceof Error ? error.message : 'Error al crear aviso';
+  };
+
   useEffect(() => {
     if (user) {
       loadData();
@@ -73,9 +77,9 @@ export default function AnnouncementWall() {
       setShowForm(false);
       setFormData({ title: '', message: '', urgency: 'informative', target_role: '' });
       loadData();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error creating announcement:', error);
-      alert(error.message || 'Error al crear aviso');
+      alert(getErrorMessage(error));
     }
   };
 
