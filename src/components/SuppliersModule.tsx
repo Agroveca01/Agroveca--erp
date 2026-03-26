@@ -22,6 +22,10 @@ export default function SuppliersModule() {
     notes: '',
   });
 
+  const getErrorMessage = (error: unknown) => {
+    return error instanceof Error ? error.message : 'Error al guardar proveedor';
+  };
+
   useEffect(() => {
     loadData();
   }, []);
@@ -70,9 +74,9 @@ export default function SuppliersModule() {
         notes: '',
       });
       loadData();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error saving supplier:', error);
-      alert(error.message || 'Error al guardar proveedor');
+      alert(getErrorMessage(error));
     }
   };
 

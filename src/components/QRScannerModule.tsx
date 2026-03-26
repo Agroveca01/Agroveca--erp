@@ -50,7 +50,7 @@ export default function QRScannerModule({ onClose, onMaterialFound }: QRScannerM
     await searchMaterial(decodedText);
   };
 
-  const onScanError = (error: any) => {
+  const onScanError = (error: string) => {
     console.log(error);
   };
 
