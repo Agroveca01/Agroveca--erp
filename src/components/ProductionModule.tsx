@@ -1,6 +1,12 @@
 import { useState, useEffect } from 'react';
 import { FlaskConical, Plus, Calendar, CreditCard as Edit, Trash2, X } from 'lucide-react';
 import { supabase, Product, ProductRecipe, ProductionBatch, RawMaterial } from '../lib/supabase';
+import {
+  calculateProductionBatchCosts,
+  getEstimatedRawMaterialUnitCost,
+  getRecipeCostPer100Liters,
+  getUnitsPerStandardBatch,
+} from '../lib/productionModuleHelpers';
 
 export default function ProductionModule() {
   const [view, setView] = useState<'recipes' | 'batches'>('recipes');
@@ -264,14 +270,7 @@ export default function ProductionModule() {
   const calculateBatchCost = () => {
     if (!selectedProduct || recipes.length === 0) return 0;
 
-    const multiplier = batchForm.quantity_liters / 100;
-    const rawMaterialCost = recipes.reduce((total, recipe) => {
-      const quantity = recipe.quantity_per_100l * multiplier;
-      const cost = recipe.raw_materials?.current_cost || 0;
-      return total + (quantity * cost);
-    }, 0);
-
-    return rawMaterialCost;
+    return calculateProductionBatchCosts(recipes, batchForm.quantity_liters, batchForm.units_produced).rawMaterialCost;
   };
 
   const createBatch = async () => {
@@ -279,11 +278,11 @@ export default function ProductionModule() {
 
     try {
       const multiplier = batchForm.quantity_liters / 100;
-
-      const rawMaterialCost = calculateBatchCost();
-      const packagingCost = batchForm.units_produced * 250;
-      const totalCost = rawMaterialCost + packagingCost;
-      const costPerUnit = batchForm.units_produced > 0 ? totalCost / batchForm.units_produced : 0;
+      const costSummary = calculateProductionBatchCosts(
+        recipes,
+        batchForm.quantity_liters,
+        batchForm.units_produced,
+      );
 
       const batchNumber = `BATCH-${selectedProduct.product_id}-${Date.now()}`;
 
@@ -294,10 +293,10 @@ export default function ProductionModule() {
           batch_number: batchNumber,
           quantity_liters: batchForm.quantity_liters,
           units_produced: batchForm.units_produced,
-          raw_material_cost: rawMaterialCost,
-          packaging_cost: packagingCost,
-          total_cost: totalCost,
-          cost_per_unit: costPerUnit,
+          raw_material_cost: costSummary.rawMaterialCost,
+          packaging_cost: costSummary.packagingCost,
+          total_cost: costSummary.totalCost,
+          cost_per_unit: costSummary.costPerUnit,
           notes: batchForm.notes,
         });
 
@@ -552,20 +551,10 @@ export default function ProductionModule() {
                     </tr>
                   )))}
                   {recipes.length > 0 && (() => {
-                    const totalCost100L = recipes.reduce((total, recipe) => {
-                      return total + ((recipe.raw_materials?.current_cost || 0) * recipe.quantity_per_100l);
-                    }, 0);
+                    const totalCost100L = getRecipeCostPer100Liters(recipes);
                     const format = selectedProduct?.format || '';
-                    let volumeMl = 200;
-                    if (format.match(/\d+\s*cc/i)) {
-                      volumeMl = parseFloat((format.match(/(\d+)\s*cc/i) || [])[1] || '200');
-                    } else if (format.match(/\d+\s*ml/i)) {
-                      volumeMl = parseFloat((format.match(/(\d+)\s*ml/i) || [])[1] || '200');
-                    } else if (format.match(/\d+\.?\d*\s*L/i)) {
-                      volumeMl = parseFloat((format.match(/(\d+\.?\d*)\s*L/i) || [])[1] || '1') * 1000;
-                    }
-                    const unitsPerBatch = Math.floor(100000 / volumeMl);
-                    const costPerUnit = unitsPerBatch > 0 ? totalCost100L / unitsPerBatch : totalCost100L;
+                    const unitsPerBatch = getUnitsPerStandardBatch(format);
+                    const costPerUnit = getEstimatedRawMaterialUnitCost(recipes, format);
 
                     return (
                       <>

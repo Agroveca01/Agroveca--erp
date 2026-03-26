@@ -1,65 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Beaker, CheckCircle, XCircle, AlertTriangle, Droplet, FileText } from 'lucide-react';
+import {
+  findPackagingMatch,
+  getBatchShelfLifeMonths,
+  ProductionValidationResult,
+  validateProductionInput,
+} from '../lib/productionHelpers';
 import { supabase, Product, PackagingInventory, ProductionOrder } from '../lib/supabase';
-
-const RTU_CONCENTRATE_RATIO = 0.01;
-
-const parseFormatToLiters = (format: string): number | null => {
-  const normalizedFormat = format.trim().toLowerCase();
-  const numericMatch = normalizedFormat.match(/(\d+(?:[.,]\d+)?)/);
-
-  if (!numericMatch) return null;
-
-  const amount = parseFloat(numericMatch[1].replace(',', '.'));
-  if (Number.isNaN(amount) || amount <= 0) return null;
-
-  if (normalizedFormat.includes('cc') || normalizedFormat.includes('ml')) {
-    return amount / 1000;
-  }
-
-  if (normalizedFormat.includes('l')) {
-    return amount;
-  }
-
-  return null;
-};
-
-const getUnitVolumeLiters = (product: Product): number => {
-  const parsedFormat = parseFormatToLiters(product.format);
-
-  if (parsedFormat && parsedFormat > 0) {
-    return parsedFormat;
-  }
-
-  return product.production_unit_liters > 0 ? product.production_unit_liters : 0;
-};
-
-const getRequiredMix = (product: Product, targetUnits: number) => {
-  const totalVolumeLiters = getUnitVolumeLiters(product) * targetUnits;
-
-  return {
-    totalVolumeLiters,
-    concentrateRequired: totalVolumeLiters * RTU_CONCENTRATE_RATIO,
-    waterRequired: totalVolumeLiters * (1 - RTU_CONCENTRATE_RATIO),
-  };
-};
-
-const getBatchShelfLifeMonths = (product: Product) => {
-  return product.product_type === 'sustrato' ? 12 : null;
-};
-
-interface ProductionValidation {
-  product: Product;
-  targetUnits: number;
-  totalVolumeLiters: number;
-  concentrateRequired: number;
-  waterRequired: number;
-  envase?: PackagingInventory;
-  tapa?: PackagingInventory;
-  etiqueta?: PackagingInventory;
-  errors: string[];
-  passed: boolean;
-}
 
 export default function ProductionSheetModule() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -68,7 +15,7 @@ export default function ProductionSheetModule() {
 
   const [selectedProduct, setSelectedProduct] = useState('');
   const [targetUnits, setTargetUnits] = useState(24);
-  const [validation, setValidation] = useState<ProductionValidation | null>(null);
+  const [validation, setValidation] = useState<ProductionValidationResult | null>(null);
 
   useEffect(() => {
     loadData();
@@ -99,53 +46,14 @@ export default function ProductionSheetModule() {
     const product = products.find((p) => p.id === selectedProduct);
     if (!product) return;
 
-    const format = product.format.toLowerCase();
-    const mix = getRequiredMix(product, targetUnits);
+    const validationResult = validateProductionInput(product, inventory, targetUnits);
 
-    if (mix.totalVolumeLiters <= 0) {
+    if (validationResult.totalVolumeLiters <= 0) {
       alert('No se pudo calcular el volumen por unidad a partir del formato del producto.');
       return;
     }
 
-    const errors: string[] = [];
-
-    const envase = inventory.find(
-      (item) => item.item_type === 'envase' && item.format && format.includes(item.format.toLowerCase())
-    );
-    const tapa = inventory.find(
-      (item) =>
-        (item.item_type === 'tapa' || item.item_type === 'gatillo') &&
-        item.format &&
-        format.includes(item.format.toLowerCase())
-    );
-    const etiqueta = inventory.find(
-      (item) => item.item_type === 'etiqueta' && item.format && format.includes(item.format.toLowerCase())
-    );
-
-    if (!envase || envase.current_stock < targetUnits) {
-      errors.push(`Envases insuficientes. Necesitas ${targetUnits}, tienes ${envase?.current_stock || 0}`);
-    }
-    if (!tapa || tapa.current_stock < targetUnits) {
-      errors.push(
-        `Tapas/Gatillos insuficientes. Necesitas ${targetUnits}, tienes ${tapa?.current_stock || 0}`
-      );
-    }
-    if (!etiqueta || etiqueta.current_stock < targetUnits) {
-      errors.push(`Etiquetas insuficientes. Necesitas ${targetUnits}, tienes ${etiqueta?.current_stock || 0}`);
-    }
-
-    setValidation({
-      product,
-      targetUnits,
-      totalVolumeLiters: mix.totalVolumeLiters,
-      concentrateRequired: mix.concentrateRequired,
-      waterRequired: mix.waterRequired,
-      envase,
-      tapa,
-      etiqueta,
-      errors,
-      passed: errors.length === 0,
-    });
+    setValidation(validationResult);
   };
 
   const createProductionOrder = async () => {
@@ -230,18 +138,9 @@ export default function ProductionSheetModule() {
             .split('T')[0]
         : null;
 
-      const envase = inventory.find(
-        (item) => item.item_type === 'envase' && item.format && format.includes(item.format.toLowerCase())
-      );
-      const tapa = inventory.find(
-        (item) =>
-          (item.item_type === 'tapa' || item.item_type === 'gatillo') &&
-          item.format &&
-          format.includes(item.format.toLowerCase())
-      );
-      const etiqueta = inventory.find(
-        (item) => item.item_type === 'etiqueta' && item.format && format.includes(item.format.toLowerCase())
-      );
+      const envase = findPackagingMatch(inventory, format, ['envase']);
+      const tapa = findPackagingMatch(inventory, format, ['tapa', 'gatillo']);
+      const etiqueta = findPackagingMatch(inventory, format, ['etiqueta']);
 
       const consumePackagingInventory = async (
         packagingItem: PackagingInventory | undefined,
