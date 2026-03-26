@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Star, Package, CheckCircle, AlertCircle, Gift, Printer, Search, Filter } from 'lucide-react';
+import { filterPreparedOrders, sanitizeOrderItems } from '../lib/orderPreparationHelpers';
 import { CustomerOrderItem, supabase } from '../lib/supabase';
 import VIPOrderLabel from './VIPOrderLabel';
 import ThankYouCard from './ThankYouCard';
@@ -24,14 +25,6 @@ interface Order {
   };
 }
 
-const sanitizeOrderItems = (items: CustomerOrderItem[] | null | undefined) => {
-  return (items || []).map((item) => ({
-    name: item.name || 'Producto sin nombre',
-    quantity: item.quantity || 0,
-    sku: item.sku,
-  }));
-};
-
 export default function OrderPreparationModule() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
@@ -44,10 +37,6 @@ export default function OrderPreparationModule() {
   useEffect(() => {
     loadOrders();
   }, []);
-
-  useEffect(() => {
-    filterOrders();
-  }, [orders, searchTerm, statusFilter]);
 
   const loadOrders = async () => {
     const { data, error } = await supabase
@@ -65,26 +54,13 @@ export default function OrderPreparationModule() {
     }
   };
 
-  const filterOrders = () => {
-    let filtered = orders;
+  const filterOrders = useCallback(() => {
+    setFilteredOrders(filterPreparedOrders(orders, searchTerm, statusFilter));
+  }, [orders, searchTerm, statusFilter]);
 
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(order => order.status === statusFilter);
-    }
-
-    if (searchTerm) {
-      filtered = filtered.filter(order =>
-        order.order_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        order.customer?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        order.customer?.email?.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    const vipOrders = filtered.filter(order => order.reward_eligible && !order.reward_included);
-    const regularOrders = filtered.filter(order => !order.reward_eligible || order.reward_included);
-
-    setFilteredOrders([...vipOrders, ...regularOrders]);
-  };
+  useEffect(() => {
+    filterOrders();
+  }, [filterOrders]);
 
   const updateOrderStatus = async (orderId: string, newStatus: string) => {
     const { error } = await supabase
