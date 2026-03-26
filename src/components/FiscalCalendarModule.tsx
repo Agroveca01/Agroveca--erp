@@ -1,7 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Calendar, AlertTriangle, DollarSign, CheckCircle, Clock, TrendingUp, Receipt, Calculator } from 'lucide-react';
+import {
+  getFiscalSummary,
+  getMonthlyFiscalData,
+  isF29AlertPeriod,
+  simulateWithdrawal,
+} from '../lib/fiscalCalendarHelpers';
 import { supabase, FiscalConfig, Purchase, SalesOrder } from '../lib/supabase';
-import { calculateNetFromGross } from '../lib/taxUtils';
 
 export default function FiscalCalendarModule() {
   const [fiscalConfig, setFiscalConfig] = useState<FiscalConfig | null>(null);
@@ -55,37 +60,19 @@ export default function FiscalCalendarModule() {
     }).format(amount);
   };
 
-  const thisMonth = new Date().getMonth();
-  const thisYear = new Date().getFullYear();
-  const monthlyOrders = orders.filter(order => {
-    const orderDate = new Date(order.order_date);
-    return orderDate.getMonth() === thisMonth && orderDate.getFullYear() === thisYear;
-  });
-
-  const monthlyPurchases = purchases.filter(purchase => {
-    const purchaseDate = new Date(purchase.purchase_date);
-    return purchaseDate.getMonth() === thisMonth && purchaseDate.getFullYear() === thisYear;
-  });
-
-  const totalRevenueGross = monthlyOrders.reduce((sum, order) => sum + order.total_amount, 0);
-  const revenueBreakdown = calculateNetFromGross(totalRevenueGross);
-  const totalRevenueNet = revenueBreakdown.net;
-  const vatDebit = revenueBreakdown.vat;
-
-  const totalVatCredit = monthlyPurchases.reduce((sum, purchase) => sum + purchase.vat_credit, 0);
-
-  const netVatToPay = vatDebit - totalVatCredit;
-  const ppmAmount = totalRevenueNet * (ppmPercentage / 100);
-  const totalF29Reserve = netVatToPay + ppmAmount;
-
-  const totalCashAvailable = totalRevenueGross;
-  const realProfitAvailable = totalRevenueNet - totalF29Reserve;
-
-  const today = new Date();
-  const currentDay = today.getDate();
-  const isF29AlertPeriod = currentDay >= 12 && currentDay <= 20;
-
-  const withdrawalWarning = withdrawalAmount > realProfitAvailable;
+  const { monthlyOrders, monthlyPurchases } = getMonthlyFiscalData(orders, purchases);
+  const {
+    totalRevenueNet,
+    vatDebit,
+    totalVatCredit,
+    netVatToPay,
+    ppmAmount,
+    totalF29Reserve,
+    totalCashAvailable,
+    realProfitAvailable,
+  } = getFiscalSummary(monthlyOrders, monthlyPurchases, ppmPercentage);
+  const showF29Alert = isF29AlertPeriod();
+  const { withdrawalWarning, remainingAfterWithdrawal } = simulateWithdrawal(withdrawalAmount, realProfitAvailable);
 
   return (
     <div className="space-y-6">
@@ -96,7 +83,7 @@ export default function FiscalCalendarModule() {
         </div>
       </div>
 
-      {isF29AlertPeriod && (
+      {showF29Alert && (
         <div className="bg-gradient-to-r from-orange-600 to-red-600 rounded-xl shadow-2xl border-2 border-orange-400 p-6 animate-pulse">
           <div className="flex items-center space-x-3">
             <AlertTriangle className="w-8 h-8 text-white" />
@@ -305,7 +292,7 @@ export default function FiscalCalendarModule() {
                         Saldo después del retiro:
                       </span>
                       <span className={`font-bold text-xl ${withdrawalWarning ? 'text-red-300' : 'text-green-300'}`}>
-                        {formatCurrency(realProfitAvailable - withdrawalAmount)}
+                        {formatCurrency(remainingAfterWithdrawal)}
                       </span>
                     </div>
                   </div>
