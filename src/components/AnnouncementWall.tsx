@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Bell, AlertTriangle, Info, CheckCircle, Plus, X } from 'lucide-react';
+import { countUnreadAnnouncements } from '../lib/dashboardHelpers';
 import { supabase, SystemAnnouncement } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -116,7 +117,7 @@ export default function AnnouncementWall() {
     }
   };
 
-  const unreadCount = announcements.filter((a) => !reads.has(a.id)).length;
+  const unreadCount = countUnreadAnnouncements(announcements, reads);
 
   return (
     <div className="bg-slate-900/50 backdrop-blur-sm rounded-xl shadow-2xl border border-slate-700/50 p-6">

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Award, TrendingUp, Users, Download, Calendar } from 'lucide-react';
+import { getTopPerformers, getUserRankingPosition } from '../lib/dashboardHelpers';
 import { supabase, WeeklyKPI, ActivityLog } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -82,7 +83,7 @@ export default function WeeklyKPIModule() {
   };
 
   const myKPI = kpis.find((k) => k.user_id === user?.id);
-  const topPerformers = kpis.slice(0, 3);
+  const topPerformers = getTopPerformers(kpis);
 
   const generateReport = () => {
     alert('Funcionalidad de exportación de PDF en desarrollo');
@@ -142,7 +143,7 @@ export default function WeeklyKPIModule() {
             <div className="bg-white/10 backdrop-blur rounded-lg p-4">
               <div className="text-sm text-white/80 mb-1">Posición</div>
               <div className="text-3xl font-bold text-white">
-                #{kpis.findIndex((k) => k.user_id === user?.id) + 1}
+                #{getUserRankingPosition(kpis, user?.id)}
               </div>
             </div>
           </div>

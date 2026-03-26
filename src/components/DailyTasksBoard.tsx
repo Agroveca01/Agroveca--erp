@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { CheckSquare, Square, AlertTriangle, Clock, TrendingUp } from 'lucide-react';
+import { calculateTaskCompletionRate, splitTasksByCriticality } from '../lib/dashboardHelpers';
 import { supabase, DailyTask } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -58,12 +59,8 @@ export default function DailyTasksBoard() {
     }
   };
 
-  const totalTasks = tasks.length;
-  const completedTasks = tasks.filter((t) => completions.has(t.id)).length;
-  const completionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
-
-  const criticalTasks = tasks.filter((t) => t.is_critical && !completions.has(t.id));
-  const normalTasks = tasks.filter((t) => !t.is_critical);
+  const { completedTasks, totalTasks, completionRate } = calculateTaskCompletionRate(tasks, completions);
+  const { criticalTasks, normalTasks } = splitTasksByCriticality(tasks, completions);
 
   return (
     <div className="bg-slate-900/50 backdrop-blur-sm rounded-xl shadow-2xl border border-slate-700/50 p-6">
