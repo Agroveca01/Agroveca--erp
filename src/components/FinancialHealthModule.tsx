@@ -1,21 +1,13 @@
 import { useState, useEffect } from 'react';
 import { TrendingUp, TrendingDown, AlertCircle, DollarSign, BarChart3, PieChart } from 'lucide-react';
 import { supabase, AccountsPayable, AccountsReceivable, Customer, CustomerOrder, SalesOrder } from '../lib/supabase';
-
-type TopCustomer = Customer & {
-  orderCount: number;
-  totalSpent: number;
-  totalUnits: number;
-  paymentScore: string | null;
-};
-
-type RevenueChannel = {
-  label: string;
-  revenue: number;
-  percentage: number;
-  barClass: string;
-  amountClass: string;
-};
+import {
+  getLiquiditySummary,
+  getMonthlyCompletedOrders,
+  getReceivablesAgingSummary,
+  getRevenueChannels,
+  getTopCustomers,
+} from '../lib/financialHealthHelpers';
 
 export default function FinancialHealthModule() {
   const [payables, setPayables] = useState<AccountsPayable[]>([]);
@@ -56,84 +48,11 @@ export default function FinancialHealthModule() {
     }).format(amount);
   };
 
-  const totalPayables = payables.reduce((sum, p) => sum + p.amount_due, 0);
-  const totalReceivables = receivables.reduce((sum, r) => sum + r.amount_due, 0);
-  const liquidityRatio = totalPayables > 0 ? totalReceivables / totalPayables : 0;
-  const netCashFlow = totalReceivables - totalPayables;
-
-  const thisMonth = new Date().getMonth();
-  const thisYear = new Date().getFullYear();
-  const monthlyOrders = orders.filter((order) => {
-    const orderDate = new Date(order.order_date);
-    return order.status === 'completed' && orderDate.getMonth() === thisMonth && orderDate.getFullYear() === thisYear;
-  });
-
-  const shopifyOrders = monthlyOrders.filter((o) => o.channel === 'shopify');
-  const wholesaleOrders = monthlyOrders.filter((o) => o.channel === 'wholesale');
-  const otherOrders = monthlyOrders.filter((o) => o.channel !== 'shopify' && o.channel !== 'wholesale');
-
-  const shopifyRevenue = shopifyOrders.reduce((sum, o) => sum + o.total_amount, 0);
-  const wholesaleRevenue = wholesaleOrders.reduce((sum, o) => sum + o.total_amount, 0);
-  const otherRevenue = otherOrders.reduce((sum, o) => sum + o.total_amount, 0);
-  const totalRevenue = shopifyRevenue + wholesaleRevenue + otherRevenue;
-
-  const shopifyPercentage = totalRevenue > 0 ? (shopifyRevenue / totalRevenue) * 100 : 0;
-  const wholesalePercentage = totalRevenue > 0 ? (wholesaleRevenue / totalRevenue) * 100 : 0;
-  const otherPercentage = totalRevenue > 0 ? (otherRevenue / totalRevenue) * 100 : 0;
-
-  const revenueChannels: RevenueChannel[] = [
-    {
-      label: 'Shopify (Minorista)',
-      revenue: shopifyRevenue,
-      percentage: shopifyPercentage,
-      barClass: 'bg-[#10b981]',
-      amountClass: 'text-[#10b981]',
-    },
-    {
-      label: 'Distribuidores (Mayorista)',
-      revenue: wholesaleRevenue,
-      percentage: wholesalePercentage,
-      barClass: 'bg-gradient-to-r from-blue-500 to-cyan-500',
-      amountClass: 'text-blue-400',
-    },
-    {
-      label: 'Directo / Otros',
-      revenue: otherRevenue,
-      percentage: otherPercentage,
-      barClass: 'bg-gradient-to-r from-violet-500 to-fuchsia-500',
-      amountClass: 'text-violet-300',
-    },
-  ];
-
-  const criticalReceivables = receivables.filter((r) => r.days_overdue > 30);
-  const activeCustomerOrders = customerOrders.filter((order) => order.status !== 'cancelled');
-
-  const topCustomers: TopCustomer[] = customers
-    .map((customer) => {
-      const ordersForCustomer = activeCustomerOrders.filter((order) => order.customer_id === customer.id);
-      const receivablesForCustomer = receivables.filter((receivable) => receivable.customer_id === customer.id);
-      const totalSpent = ordersForCustomer.reduce((sum, order) => sum + order.total_amount, 0);
-      const totalUnits = ordersForCustomer.reduce(
-        (sum, order) =>
-          sum + order.items.reduce((itemsSum, item) => itemsSum + (item.quantity || 0), 0),
-        0
-      );
-
-      const paymentScore = receivablesForCustomer.length > 0
-        ? receivablesForCustomer.sort((a, b) => b.created_at.localeCompare(a.created_at))[0].payment_score
-        : null;
-
-      return {
-        ...customer,
-        totalSpent,
-        totalUnits,
-        orderCount: ordersForCustomer.length,
-        paymentScore,
-      };
-    })
-    .filter((customer) => customer.orderCount > 0 || customer.totalSpent > 0 || customer.paymentScore)
-    .sort((a, b) => b.totalSpent - a.totalSpent)
-    .slice(0, 5);
+  const { totalPayables, totalReceivables, liquidityRatio, netCashFlow } = getLiquiditySummary(payables, receivables);
+  const monthlyOrders = getMonthlyCompletedOrders(orders);
+  const { totalRevenue, revenueChannels } = getRevenueChannels(monthlyOrders);
+  const topCustomers = getTopCustomers(customers, customerOrders, receivables);
+  const receivablesAging = getReceivablesAgingSummary(receivables);
 
   return (
     <div className="space-y-6">
@@ -261,7 +180,7 @@ export default function FinancialHealthModule() {
               </div>
             )}
 
-            {topCustomers.map((customer, index) => (
+              {topCustomers.map((customer, index) => (
               <div key={customer.id} className="bg-slate-800/50 rounded-lg p-4">
                 <div className="flex items-start justify-between mb-2">
                   <div className="flex items-center space-x-2">
@@ -301,39 +220,23 @@ export default function FinancialHealthModule() {
         <h3 className="text-xl font-bold text-white mb-6">Análisis de Antigüedad de Cuentas por Cobrar</h3>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-green-900/30 rounded-lg p-5 border-2 border-green-500/50">
-            <h4 className="font-bold text-green-200 mb-2">Vigentes (0 días)</h4>
-            <p className="text-3xl font-bold text-green-400">
-              {receivables.filter((r) => r.days_overdue === 0).length}
-            </p>
-            <p className="text-sm text-green-300 mt-1">
-              {formatCurrency(
-                receivables.filter((r) => r.days_overdue === 0).reduce((sum, r) => sum + r.amount_due, 0)
-              )}
-            </p>
-          </div>
+              <div className="bg-green-900/30 rounded-lg p-5 border-2 border-green-500/50">
+                <h4 className="font-bold text-green-200 mb-2">Vigentes (0 días)</h4>
+                <p className="text-3xl font-bold text-green-400">{receivablesAging.current.count}</p>
+                <p className="text-sm text-green-300 mt-1">{formatCurrency(receivablesAging.current.totalAmount)}</p>
+              </div>
 
-          <div className="bg-yellow-900/30 rounded-lg p-5 border-2 border-yellow-500/50">
-            <h4 className="font-bold text-yellow-200 mb-2">Atraso 1-15 días</h4>
-            <p className="text-3xl font-bold text-yellow-400">
-              {receivables.filter((r) => r.days_overdue > 0 && r.days_overdue <= 15).length}
-            </p>
-            <p className="text-sm text-yellow-300 mt-1">
-              {formatCurrency(
-                receivables
-                  .filter((r) => r.days_overdue > 0 && r.days_overdue <= 15)
-                  .reduce((sum, r) => sum + r.amount_due, 0)
-              )}
-            </p>
-          </div>
+              <div className="bg-yellow-900/30 rounded-lg p-5 border-2 border-yellow-500/50">
+                <h4 className="font-bold text-yellow-200 mb-2">Atraso 1-15 días</h4>
+                <p className="text-3xl font-bold text-yellow-400">{receivablesAging.overdue1to15.count}</p>
+                <p className="text-sm text-yellow-300 mt-1">{formatCurrency(receivablesAging.overdue1to15.totalAmount)}</p>
+              </div>
 
-          <div className="bg-red-900/30 rounded-lg p-5 border-2 border-red-500/50">
-            <h4 className="font-bold text-red-200 mb-2">Crítico (+30 días)</h4>
-            <p className="text-3xl font-bold text-red-400">{criticalReceivables.length}</p>
-            <p className="text-sm text-red-300 mt-1">
-              {formatCurrency(criticalReceivables.reduce((sum, r) => sum + r.amount_due, 0))}
-            </p>
-          </div>
+              <div className="bg-red-900/30 rounded-lg p-5 border-2 border-red-500/50">
+                <h4 className="font-bold text-red-200 mb-2">Crítico (+30 días)</h4>
+                <p className="text-3xl font-bold text-red-400">{receivablesAging.critical.count}</p>
+                <p className="text-sm text-red-300 mt-1">{formatCurrency(receivablesAging.critical.totalAmount)}</p>
+              </div>
         </div>
       </div>
     </div>
