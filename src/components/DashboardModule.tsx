@@ -3,8 +3,12 @@ import { TrendingUp, Package, Target, AlertTriangle, TrendingDown, Calculator, R
 import { calculateDashboardProductMetrics, getMonthlyRevenueSummary } from '../lib/dashboardFinancialHelpers';
 import { getDashboardMarginSummary } from '../lib/dashboardModuleHelpers';
 import { getShopifySimulatorSummary } from '../lib/dashboardShopifySimulatorHelpers';
+import {
+  getDashboardWholesaleMOQError,
+  getDashboardWholesaleSummary,
+} from '../lib/dashboardWholesaleSimulatorHelpers';
 import { supabase, Product, BusinessConfig, SalesOrder } from '../lib/supabase';
-import { calculateNetFromGross, formatVATPercentage } from '../lib/taxUtils';
+import { formatVATPercentage } from '../lib/taxUtils';
 import { generateProductDataSheet } from '../lib/pdfGenerator';
 import ExpirationAlerts from './ExpirationAlerts';
 import AnnouncementWall from './AnnouncementWall';
@@ -698,72 +702,29 @@ function WholesaleDistributorView({ products, onBack, loading }: WholesaleDistri
   };
 
   const validateMOQ = (): boolean => {
-    const rtuProducts = products.filter(p => p.product.format.toLowerCase().includes('rtu') && p.product.format.toLowerCase().includes('500'));
-    const concentrateProducts = products.filter(p => {
-      const fmt = p.product.format.toLowerCase();
-      return (fmt.includes('100') || fmt.includes('200')) && !fmt.includes('rtu');
-    });
-
-    const rtuTotal = rtuProducts.reduce((sum, p) => sum + (quantities[p.product.id] || 0), 0);
-    const concentrateTotal = concentrateProducts.reduce((sum, p) => sum + (quantities[p.product.id] || 0), 0);
-
-    if (rtuTotal > 0 && rtuTotal < 12) {
-      setMoqError('RTU-500cc: Mínimo 12 unidades en total. Actualmente: ' + rtuTotal);
-      return false;
-    }
-
-    if (concentrateTotal > 0 && concentrateTotal < 12) {
-      setMoqError('Concentrados (100cc/200cc): Mínimo 12 unidades en total. Actualmente: ' + concentrateTotal);
-      return false;
-    }
-
-    setMoqError(null);
-    return true;
+    const error = getDashboardWholesaleMOQError(products, quantities);
+    setMoqError(error);
+    return !error;
   };
 
   const handleQuantityChange = (productId: string, quantity: number) => {
     setQuantities(prev => ({ ...prev, [productId]: Math.max(0, quantity) }));
   };
 
-  let subtotalGross = 0;
-  let subtotalNet = 0;
-  let subtotalVAT = 0;
-  let totalCtpProfitNet = 0;
-  let totalCostsNet = 0;
-
-  const selectedProducts = products.filter(p => (quantities[p.product.id] || 0) > 0);
-
-  selectedProducts.forEach(p => {
-    const qty = quantities[p.product.id] || 0;
-    const itemGross = p.distributorPriceGross * qty;
-    const itemNet = p.distributorPriceNet * qty;
-    const itemVAT = p.distributorVAT * qty;
-
-    subtotalGross += itemGross;
-    subtotalNet += itemNet;
-    subtotalVAT += itemVAT;
-    totalCtpProfitNet += p.ctpProfitNetPerUnit * qty;
-    totalCostsNet += p.totalProductionCost * qty;
-  });
-
-  const shippingNetBreakdown = calculateNetFromGross(shippingCost);
-  const totalGross = subtotalGross + shippingCost;
-  const finalCtpProfit = totalCtpProfitNet - shippingNetBreakdown.net;
-
-  const totalUnitsSelected = Object.values(quantities).reduce((sum, qty) => sum + qty, 0);
-
-  const shopifyComparison = selectedProducts.reduce((acc, p) => {
-    const qty = quantities[p.product.id] || 0;
-    acc.revenue += p.basePriceNet * qty;
-    acc.profit += p.netProfitNet * qty;
-    return acc;
-  }, { revenue: 0, profit: 0 });
-
-  const wholesaleProfit = totalCtpProfitNet;
-  const profitDifference = wholesaleProfit - shopifyComparison.profit;
-  const profitDifferencePercent = shopifyComparison.profit > 0
-    ? ((profitDifference / shopifyComparison.profit) * 100)
-    : 0;
+  const {
+    selectedProducts,
+    subtotalGross,
+    subtotalNet,
+    subtotalVAT,
+    totalCostsNet,
+    shippingNetBreakdown,
+    totalGross,
+    finalCtpProfit,
+    totalUnitsSelected,
+    shopifyComparison,
+    profitDifference,
+    profitDifferencePercent,
+  } = getDashboardWholesaleSummary(products, quantities, shippingCost);
 
   return (
     <div className="space-y-6">
