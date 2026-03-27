@@ -14,6 +14,27 @@ export interface VolumeDiscount {
   description: string;
 }
 
+export interface PricingAnalysis {
+  product: Product;
+  rawMaterialCost: number;
+  containerCost: number;
+  packagingCost: number;
+  labelCost: number;
+  factoryCost: number;
+  baseDistributorPrice: number;
+  distributorPriceWithDiscount: number;
+  finalMarginPercent: number;
+  marginWarning: boolean;
+  suggestedPVP: number;
+  recommendedPVP70: number;
+  currentShopifyPrice: number;
+  priceDifference: number;
+  priceDifferencePercent: number;
+  ourMargin: number;
+  distributorMargin: number;
+  totalProfit: number;
+}
+
 export const VOLUME_DISCOUNTS: VolumeDiscount[] = [
   {
     level: 1,
@@ -95,5 +116,57 @@ export const calculateFactoryCost = (
     labelCost,
     packagingCost,
     factoryCost,
+  };
+};
+
+export const calculatePricingAnalysis = (
+  product: Product,
+  costs: FixedCostsConfig | null,
+  rawMaterialCostPer100L: number,
+  ourMarginTarget: number,
+  distributorMarginTarget: number,
+  orderQuantity: number,
+): PricingAnalysis => {
+  const volumeDiscount = getVolumeDiscount(orderQuantity);
+  const { rawMaterialCost, containerCost, labelCost, packagingCost, factoryCost } = calculateFactoryCost(
+    product,
+    costs,
+    rawMaterialCostPer100L,
+  );
+
+  const baseDistributorPrice = factoryCost / (1 - ourMarginTarget / 100);
+  const distributorPriceWithDiscount = baseDistributorPrice * (1 - volumeDiscount.discountPercent / 100);
+  const finalMarginPercent = ((distributorPriceWithDiscount - factoryCost) / distributorPriceWithDiscount) * 100;
+  const marginWarning = finalMarginPercent < 40;
+  const suggestedPVP = distributorPriceWithDiscount / (1 - distributorMarginTarget / 100);
+  const recommendedPVP70 = factoryCost / (1 - 0.70);
+  const currentShopifyPrice = product.base_price;
+  const priceDifference = suggestedPVP - currentShopifyPrice;
+  const priceDifferencePercent = currentShopifyPrice > 0
+    ? (priceDifference / currentShopifyPrice) * 100
+    : 0;
+  const ourMargin = ((baseDistributorPrice - factoryCost) / baseDistributorPrice) * 100;
+  const distributorMargin = ((suggestedPVP - distributorPriceWithDiscount) / suggestedPVP) * 100;
+  const totalProfit = (distributorPriceWithDiscount - factoryCost) * orderQuantity;
+
+  return {
+    product,
+    rawMaterialCost,
+    containerCost,
+    packagingCost,
+    labelCost,
+    factoryCost,
+    baseDistributorPrice,
+    distributorPriceWithDiscount,
+    finalMarginPercent,
+    marginWarning,
+    suggestedPVP,
+    recommendedPVP70,
+    currentShopifyPrice,
+    priceDifference,
+    priceDifferencePercent,
+    ourMargin,
+    distributorMargin,
+    totalProfit,
   };
 };

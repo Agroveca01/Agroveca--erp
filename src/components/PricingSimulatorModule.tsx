@@ -1,28 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { TrendingUp, DollarSign, Users, ShoppingCart, AlertCircle, Package, ShieldAlert } from 'lucide-react';
-import { calculateFactoryCost, getVolumeDiscount, VOLUME_DISCOUNTS } from '../lib/pricingHelpers';
+import {
+  calculatePricingAnalysis as calculateProductPricingAnalysis,
+  getVolumeDiscount,
+  PricingAnalysis,
+  VOLUME_DISCOUNTS,
+} from '../lib/pricingHelpers';
 import { supabase, Product, FixedCostsConfig } from '../lib/supabase';
-
-interface PricingAnalysis {
-  product: Product;
-  rawMaterialCost: number;
-  containerCost: number;
-  packagingCost: number;
-  labelCost: number;
-  factoryCost: number;
-  baseDistributorPrice: number;
-  distributorPriceWithDiscount: number;
-  finalMarginPercent: number;
-  marginWarning: boolean;
-  suggestedPVP: number;
-  recommendedPVP70: number;
-  currentShopifyPrice: number;
-  priceDifference: number;
-  priceDifferencePercent: number;
-  ourMargin: number;
-  distributorMargin: number;
-  totalProfit: number;
-}
 
 
 export default function PricingSimulatorModule() {
@@ -38,8 +22,6 @@ export default function PricingSimulatorModule() {
     prods: Product[],
     costs: FixedCostsConfig | null
   ) => {
-    const volumeDiscount = getVolumeDiscount(orderQuantity);
-
     const analysisPromises = prods.map(async (product) => {
       const { data: recipes } = await supabase
         .from('product_recipes')
@@ -51,54 +33,14 @@ export default function PricingSimulatorModule() {
         return total + (cost * recipe.quantity_per_100l);
       }, 0);
 
-      const { rawMaterialCost, containerCost, labelCost, packagingCost, factoryCost } = calculateFactoryCost(
+      return calculateProductPricingAnalysis(
         product,
         costs,
         rawMaterialCostPer100L,
+        ourMarginTarget,
+        distributorMarginTarget,
+        orderQuantity,
       );
-
-      const baseDistributorPrice = factoryCost / (1 - ourMarginTarget / 100);
-
-      const distributorPriceWithDiscount = baseDistributorPrice * (1 - volumeDiscount.discountPercent / 100);
-
-      const finalMarginPercent = ((distributorPriceWithDiscount - factoryCost) / distributorPriceWithDiscount) * 100;
-      const marginWarning = finalMarginPercent < 40;
-
-      const suggestedPVP = distributorPriceWithDiscount / (1 - distributorMarginTarget / 100);
-
-      const recommendedPVP70 = factoryCost / (1 - 0.70);
-
-      const currentShopifyPrice = product.base_price;
-      const priceDifference = suggestedPVP - currentShopifyPrice;
-      const priceDifferencePercent = currentShopifyPrice > 0
-        ? (priceDifference / currentShopifyPrice) * 100
-        : 0;
-
-      const ourMargin = ((baseDistributorPrice - factoryCost) / baseDistributorPrice) * 100;
-      const distributorMargin = ((suggestedPVP - distributorPriceWithDiscount) / suggestedPVP) * 100;
-
-      const totalProfit = (distributorPriceWithDiscount - factoryCost) * orderQuantity;
-
-      return {
-        product,
-        rawMaterialCost,
-        containerCost,
-        packagingCost,
-        labelCost,
-        factoryCost,
-        baseDistributorPrice,
-        distributorPriceWithDiscount,
-        finalMarginPercent,
-        marginWarning,
-        suggestedPVP,
-        recommendedPVP70,
-        currentShopifyPrice,
-        priceDifference,
-        priceDifferencePercent,
-        ourMargin,
-        distributorMargin,
-        totalProfit,
-      };
     });
 
     const analysis = await Promise.all(analysisPromises);
