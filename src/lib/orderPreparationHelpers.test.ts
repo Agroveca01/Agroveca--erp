@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { filterPreparedOrders, sanitizeOrderItems } from './orderPreparationHelpers';
+import {
+  canTransitionPreparedOrderStatus,
+  filterPreparedOrders,
+  getAllowedPreparedOrderStatuses,
+  getPreparedOrderStatusMeta,
+  sanitizeOrderItems,
+} from './orderPreparationHelpers';
 
 describe('orderPreparationHelpers', () => {
   it('sanitizes nullable order items for printable output', () => {
@@ -60,5 +66,24 @@ describe('orderPreparationHelpers', () => {
     ];
 
     expect(filterPreparedOrders(orders, '', 'all').map((order) => order.id)).toEqual(['o2', 'o1']);
+  });
+
+  it('returns consistent status metadata and allowed transitions for dispatch flow', () => {
+    expect(getPreparedOrderStatusMeta('ready')).toEqual({
+      value: 'ready',
+      label: 'Listo',
+      color: 'bg-green-500/20 text-green-400 border-green-500/30',
+    });
+
+    expect(getAllowedPreparedOrderStatuses('preparing')).toEqual([
+      { value: 'preparing', label: 'Preparando' },
+      { value: 'ready', label: 'Listo' },
+      { value: 'cancelled', label: 'Cancelado' },
+    ]);
+
+    expect(canTransitionPreparedOrderStatus('pending', 'preparing')).toBe(true);
+    expect(canTransitionPreparedOrderStatus('pending', 'delivered')).toBe(false);
+    expect(canTransitionPreparedOrderStatus('shipped', 'delivered')).toBe(true);
+    expect(canTransitionPreparedOrderStatus('cancelled', 'pending')).toBe(false);
   });
 });

@@ -1,7 +1,15 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Star, Package, CheckCircle, AlertCircle, Gift, Printer, Search, Filter } from 'lucide-react';
 import { getOrderPreparationSummary, hasVipRewardPending } from '../lib/orderPreparationBoardHelpers';
-import { filterPreparedOrders, sanitizeOrderItems } from '../lib/orderPreparationHelpers';
+import {
+  canTransitionPreparedOrderStatus,
+  filterPreparedOrders,
+  getAllowedPreparedOrderStatuses,
+  getPreparedOrderStatusMeta,
+  getPreparedOrderStatusOptions,
+  isPreparedOrderStatus,
+  sanitizeOrderItems,
+} from '../lib/orderPreparationHelpers';
 import { CustomerOrderItem, supabase } from '../lib/supabase';
 import VIPOrderLabel from './VIPOrderLabel';
 import ThankYouCard from './ThankYouCard';
@@ -64,6 +72,17 @@ export default function OrderPreparationModule() {
   }, [filterOrders]);
 
   const updateOrderStatus = async (orderId: string, newStatus: string) => {
+    const currentOrder = orders.find((order) => order.id === orderId);
+    if (!currentOrder || !isPreparedOrderStatus(newStatus)) {
+      alert('Estado de pedido invalido');
+      return;
+    }
+
+    if (!canTransitionPreparedOrderStatus(currentOrder.status, newStatus)) {
+      alert('La transicion de estado no es valida para este pedido');
+      return;
+    }
+
     const { error } = await supabase
       .from('customer_orders')
       .update({ status: newStatus })
@@ -101,22 +120,7 @@ export default function OrderPreparationModule() {
     setShowThankYouCard(true);
   };
 
-  const getStatusBadge = (status: string) => {
-    const badges = {
-      pending: { color: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30', label: 'Pendiente' },
-      preparing: { color: 'bg-blue-500/20 text-blue-400 border-blue-500/30', label: 'Preparando' },
-      ready: { color: 'bg-green-500/20 text-green-400 border-green-500/30', label: 'Listo' },
-      shipped: { color: 'bg-purple-500/20 text-purple-400 border-purple-500/30', label: 'Enviado' },
-      delivered: { color: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30', label: 'Entregado' },
-      cancelled: { color: 'bg-red-500/20 text-red-400 border-red-500/30', label: 'Cancelado' },
-    };
-    const badge = badges[status as keyof typeof badges] || badges.pending;
-    return (
-      <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${badge.color}`}>
-        {badge.label}
-      </span>
-    );
-  };
+  const statusOptions = getPreparedOrderStatusOptions();
 
   const {
     pendingOrders,
@@ -326,20 +330,20 @@ export default function OrderPreparationModule() {
                 className="bg-slate-800 border border-slate-700 rounded-lg pl-10 pr-4 py-2 text-white focus:outline-none focus:border-emerald-500 appearance-none"
               >
                 <option value="all">Todos los Estados</option>
-                <option value="pending">Pendiente</option>
-                <option value="preparing">Preparando</option>
-                <option value="ready">Listo</option>
-                <option value="shipped">Enviado</option>
-                <option value="delivered">Entregado</option>
-                <option value="cancelled">Cancelado</option>
+                {statusOptions.map((status) => (
+                  <option key={status.value} value={status.value}>{status.label}</option>
+                ))}
               </select>
             </div>
           </div>
         </div>
 
         <div className="space-y-3">
-          {filteredOrders.map((order) => (
-            <div
+          {filteredOrders.map((order) => {
+            const statusMeta = getPreparedOrderStatusMeta(order.status);
+            const allowedStatuses = getAllowedPreparedOrderStatuses(order.status);
+
+            return <div
               key={order.id}
               className={`rounded-lg p-4 transition-all ${
                 hasVipRewardPending(order)
@@ -354,7 +358,9 @@ export default function OrderPreparationModule() {
                       <Star className="w-5 h-5 text-amber-400 fill-amber-400 animate-pulse" />
                     )}
                     <span className="text-white font-bold">Orden #{order.order_number}</span>
-                    {getStatusBadge(order.status)}
+                    <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${statusMeta.color}`}>
+                      {statusMeta.label}
+                    </span>
                     {hasVipRewardPending(order) && (
                       <span className="bg-amber-500 text-white px-2 py-1 rounded-full text-xs font-bold flex items-center space-x-1">
                         <Gift className="w-3 h-3" />
@@ -383,12 +389,9 @@ export default function OrderPreparationModule() {
                     onChange={(e) => updateOrderStatus(order.id, e.target.value)}
                     className="bg-slate-700 border border-slate-600 rounded-lg px-3 py-1 text-white text-sm focus:outline-none focus:border-emerald-500"
                   >
-                    <option value="pending">Pendiente</option>
-                    <option value="preparing">Preparando</option>
-                    <option value="ready">Listo</option>
-                    <option value="shipped">Enviado</option>
-                    <option value="delivered">Entregado</option>
-                    <option value="cancelled">Cancelado</option>
+                    {allowedStatuses.map((status) => (
+                      <option key={status.value} value={status.value}>{status.label}</option>
+                    ))}
                   </select>
                   {hasVipRewardPending(order) && (
                     <button
@@ -401,8 +404,8 @@ export default function OrderPreparationModule() {
                   )}
                 </div>
               </div>
-            </div>
-          ))}
+            </div>;
+          })}
         </div>
       </div>
 

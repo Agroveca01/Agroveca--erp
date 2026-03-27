@@ -4,6 +4,7 @@ import { filterProducts, filterRawMaterials, isLowStockMaterial } from '../lib/i
 import {
   DEFAULT_PRODUCT_FORM,
   DEFAULT_RAW_MATERIAL_FORM,
+  getInventorySearchSummary,
   getInventorySummary,
   mapProductToForm,
   mapRawMaterialToForm,
@@ -152,6 +153,7 @@ export default function InventoryModule() {
   };
 
   const { totalRawMaterialValue, inventoryItemCount, lowStockCount } = getInventorySummary(rawMaterials, products, view);
+  const searchSummary = getInventorySearchSummary(view, filteredRawMaterials.length, filteredProducts.length);
 
   const updateRawMaterial = async () => {
     if (!editingItem) return;
@@ -315,10 +317,7 @@ export default function InventoryModule() {
           </div>
           {searchTerm && (
             <p className="mt-2 text-sm text-slate-600">
-              {view === 'raw'
-                ? `${filteredRawMaterials.length} ${filteredRawMaterials.length === 1 ? 'materia prima encontrada' : 'materias primas encontradas'}`
-                : `${filteredProducts.length} ${filteredProducts.length === 1 ? 'producto encontrado' : 'productos encontrados'}`
-              }
+              {searchSummary.message}
             </p>
           )}
         </div>

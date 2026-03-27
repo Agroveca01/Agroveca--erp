@@ -4,6 +4,7 @@ import {
   DEFAULT_PRODUCT_FORM,
   DEFAULT_RAW_MATERIAL_FORM,
   getInventorySummary,
+  getInventorySearchSummary,
   mapProductToForm,
   mapRawMaterialToForm,
 } from './inventoryModuleHelpers';
@@ -118,6 +119,28 @@ describe('inventoryModuleHelpers', () => {
       totalRawMaterialValue: 16000,
       inventoryItemCount: 1,
       lowStockCount: 1,
+    });
+  });
+
+  it('builds consistent search summary copy for raw materials and products', () => {
+    expect(getInventorySearchSummary('raw', 1, 0)).toEqual({
+      count: 1,
+      message: '1 materia prima encontrada',
+    });
+
+    expect(getInventorySearchSummary('raw', 3, 0)).toEqual({
+      count: 3,
+      message: '3 materias primas encontradas',
+    });
+
+    expect(getInventorySearchSummary('finished', 0, 1)).toEqual({
+      count: 1,
+      message: '1 producto encontrado',
+    });
+
+    expect(getInventorySearchSummary('finished', 0, 4)).toEqual({
+      count: 4,
+      message: '4 productos encontrados',
     });
   });
 });

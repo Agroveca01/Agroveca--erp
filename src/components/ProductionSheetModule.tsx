@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Beaker, CheckCircle, XCircle, AlertTriangle, Droplet, FileText } from 'lucide-react';
 import {
-  findPackagingMatch,
-  getBatchShelfLifeMonths,
+  buildProductionCompletionPlan,
   ProductionValidationResult,
   validateProductionInput,
 } from '../lib/productionHelpers';
@@ -121,77 +120,57 @@ export default function ProductionSheetModule() {
         })
         .eq('id', orderId);
 
-      const product = order.products;
-      if (!product) return;
-
-      const format = product.format.toLowerCase();
-      const successfulUnits = Math.max(0, order.target_units - wasteUnitsValue);
-      const successfulLiters = Math.max(
-        0,
-        order.concentrate_required_liters + order.water_required_liters - wasteLitersValue,
+      const batchNumber = `BATCH-${order.products?.product_id || 'UNKNOWN'}-${Date.now()}`;
+      const completionPlan = buildProductionCompletionPlan(
+        order,
+        inventory,
+        wasteUnitsValue,
+        wasteLitersValue,
+        completedAt,
+        batchNumber,
       );
-      const batchDate = completedAt.split('T')[0];
-      const shelfLifeMonths = getBatchShelfLifeMonths(product);
-      const expirationDate = shelfLifeMonths
-        ? new Date(new Date(batchDate).setMonth(new Date(batchDate).getMonth() + shelfLifeMonths))
-            .toISOString()
-            .split('T')[0]
-        : null;
 
-      const envase = findPackagingMatch(inventory, format, ['envase']);
-      const tapa = findPackagingMatch(inventory, format, ['tapa', 'gatillo']);
-      const etiqueta = findPackagingMatch(inventory, format, ['etiqueta']);
+      if (!completionPlan) return;
 
-      const consumePackagingInventory = async (
-        packagingItem: PackagingInventory | undefined,
-        itemLabel: string,
-      ) => {
-        if (!packagingItem) return;
-
+      for (const consumption of completionPlan.packagingConsumptions) {
         await supabase
           .from('packaging_inventory')
-          .update({ current_stock: Math.max(0, packagingItem.current_stock - order.target_units) })
-          .eq('id', packagingItem.id);
+          .update({ current_stock: consumption.nextStock })
+          .eq('id', consumption.packagingItemId);
 
         await supabase.from('inventory_movements').insert([
           {
-            packaging_inventory_id: packagingItem.id,
+            packaging_inventory_id: consumption.packagingItemId,
             movement_type: 'salida',
-            quantity: -order.target_units,
+            quantity: consumption.movementQuantity,
             reference_id: orderId,
             reference_type: 'production_order',
-            notes: `${itemLabel} usado en orden ${order.order_number}`,
+            notes: consumption.notes,
           },
         ]);
-      };
-
-      await consumePackagingInventory(envase, 'Envases');
-      await consumePackagingInventory(tapa, 'Tapas/Gatillos');
-      await consumePackagingInventory(etiqueta, 'Etiquetas');
-
-      const batchNumber = `BATCH-${product.product_id}-${Date.now()}`;
+      }
 
       await supabase.from('production_batches').insert([
         {
-          product_id: product.id,
-          production_order_id: orderId,
-          batch_number: batchNumber,
-          batch_date: batchDate,
-          production_date: batchDate,
-          expiration_date: expirationDate,
-          shelf_life_months: shelfLifeMonths,
-          alert_threshold_months: shelfLifeMonths ? Math.max(1, shelfLifeMonths - 3) : null,
-          quantity_liters: successfulLiters,
-          units_produced: successfulUnits,
-          raw_material_cost: 0,
-          packaging_cost: 0,
-          total_cost: 0,
-          cost_per_unit: 0,
-          notes: `Generado desde orden ${order.order_number}. Lote RTU producido - ${successfulUnits} unidades`,
+          product_id: completionPlan.batchInsert.product_id,
+          production_order_id: completionPlan.batchInsert.production_order_id,
+          batch_number: completionPlan.batchInsert.batch_number,
+          batch_date: completionPlan.batchInsert.batch_date,
+          production_date: completionPlan.batchInsert.production_date,
+          expiration_date: completionPlan.batchInsert.expiration_date,
+          shelf_life_months: completionPlan.batchInsert.shelf_life_months,
+          alert_threshold_months: completionPlan.batchInsert.alert_threshold_months,
+          quantity_liters: completionPlan.batchInsert.quantity_liters,
+          units_produced: completionPlan.batchInsert.units_produced,
+          raw_material_cost: completionPlan.batchInsert.raw_material_cost,
+          packaging_cost: completionPlan.batchInsert.packaging_cost,
+          total_cost: completionPlan.batchInsert.total_cost,
+          cost_per_unit: completionPlan.batchInsert.cost_per_unit,
+          notes: completionPlan.batchInsert.notes,
         },
       ]);
 
-      alert(`Orden completada. ${successfulUnits} unidades producidas exitosamente.`);
+      alert(`Orden completada. ${completionPlan.summary.successfulUnits} unidades producidas exitosamente.`);
       loadData();
     } catch (error) {
       console.error('Error completing production order:', error);

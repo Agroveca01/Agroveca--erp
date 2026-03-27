@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ShoppingBag, Plus, TrendingUp, Calendar, DollarSign, Star, Gift, Users } from 'lucide-react';
 import {
+  buildSalesOrderCreationPayloads,
   calculateSalesSimulation,
   getChannelColor,
   getSalesDashboardSummary,
@@ -102,50 +103,30 @@ export default function SalesModule() {
         }
       }
 
-      const unitPrice = product.base_price;
-      const subtotal = unitPrice * orderForm.quantity;
-      const commission = orderForm.channel === 'shopify' ? (subtotal * businessConfig.shopify_commission_pct / 100) : 0;
-      const shippingCost = businessConfig.shipping_cost;
-      const totalAmount = subtotal + shippingCost;
-
       const orderNumber = `ORD-${Date.now()}`;
+      const orderDate = new Date().toISOString().split('T')[0];
+      const payloads = buildSalesOrderCreationPayloads({
+        product,
+        businessConfig,
+        quantity: orderForm.quantity,
+        channel: orderForm.channel,
+        notes: orderForm.notes,
+        orderNumber,
+        orderDate,
+      });
 
       const { error } = await supabase
         .from('customer_orders')
         .insert({
           customer_id: customerId,
-          order_number: orderNumber,
-          order_date: new Date().toISOString().split('T')[0],
-          total_amount: totalAmount,
-          items: [
-            {
-              product_id: product.id,
-              name: product.name,
-              quantity: orderForm.quantity,
-              unit_price: unitPrice,
-              sku: product.product_id,
-            }
-          ],
-          status: 'pending',
+          ...payloads.customerOrder,
         });
 
       if (error) throw error;
 
       const { error: salesError } = await supabase
         .from('sales_orders')
-        .insert({
-          order_number: orderNumber,
-          product_id: orderForm.product_id,
-          quantity: orderForm.quantity,
-          unit_price: unitPrice,
-          subtotal,
-          commission,
-          shipping_cost: shippingCost,
-          total_amount: totalAmount,
-          channel: orderForm.channel,
-          status: 'completed',
-          notes: orderForm.notes,
-        });
+        .insert(payloads.salesOrder);
 
       if (salesError) console.error('Error creating sales order:', salesError);
 

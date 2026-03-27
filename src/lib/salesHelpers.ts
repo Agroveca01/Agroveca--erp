@@ -1,4 +1,4 @@
-import { SalesOrder } from './supabase';
+import { BusinessConfig, CustomerOrderItem, Product, SalesOrder } from './supabase';
 
 export type SalesChannel = 'shopify' | 'direct' | 'wholesale' | 'other';
 
@@ -26,6 +26,27 @@ export interface SalesSimulationSummary {
   totalRevenue: number;
   totalOrders: number;
   avgDiscount: number;
+}
+
+export interface SalesOrderCreationInput {
+  product: Product;
+  businessConfig: BusinessConfig;
+  quantity: number;
+  channel: SalesChannel;
+  notes: string;
+  orderNumber: string;
+  orderDate: string;
+}
+
+export interface SalesOrderCreationPayloads {
+  customerOrder: {
+    order_number: string;
+    order_date: string;
+    total_amount: number;
+    items: CustomerOrderItem[];
+    status: 'pending';
+  };
+  salesOrder: Omit<SalesOrder, 'id'>;
 }
 
 export const isSalesChannel = (value: string): value is SalesChannel => {
@@ -87,5 +108,49 @@ export const calculateSalesSimulation = (
     totalRevenue,
     totalOrders,
     avgDiscount,
+  };
+};
+
+export const buildSalesOrderCreationPayloads = (
+  input: SalesOrderCreationInput,
+): SalesOrderCreationPayloads => {
+  const unitPrice = input.product.base_price;
+  const subtotal = unitPrice * input.quantity;
+  const commission = input.channel === 'shopify'
+    ? (subtotal * input.businessConfig.shopify_commission_pct / 100)
+    : 0;
+  const shippingCost = input.businessConfig.shipping_cost;
+  const totalAmount = subtotal + shippingCost;
+
+  return {
+    customerOrder: {
+      order_number: input.orderNumber,
+      order_date: input.orderDate,
+      total_amount: totalAmount,
+      items: [
+        {
+          product_id: input.product.id,
+          name: input.product.name,
+          quantity: input.quantity,
+          unit_price: unitPrice,
+          sku: input.product.product_id,
+        },
+      ],
+      status: 'pending',
+    },
+    salesOrder: {
+      order_number: input.orderNumber,
+      product_id: input.product.id,
+      quantity: input.quantity,
+      unit_price: unitPrice,
+      subtotal,
+      commission,
+      shipping_cost: shippingCost,
+      total_amount: totalAmount,
+      channel: input.channel,
+      order_date: input.orderDate,
+      status: 'completed',
+      notes: input.notes,
+    },
   };
 };

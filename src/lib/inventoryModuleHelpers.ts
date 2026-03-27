@@ -28,6 +28,11 @@ export interface InventorySummary {
   lowStockCount: number;
 }
 
+export interface InventorySearchSummary {
+  count: number;
+  message: string;
+}
+
 export const DEFAULT_RAW_MATERIAL_FORM: RawMaterialFormValues = {
   name: '',
   category: 'chemical',
@@ -80,5 +85,25 @@ export const getInventorySummary = (
     ),
     inventoryItemCount: view === 'raw' ? rawMaterials.length : products.length,
     lowStockCount: rawMaterials.filter(isLowStockMaterial).length,
+  };
+};
+
+export const getInventorySearchSummary = (
+  view: InventoryView,
+  rawMaterialCount: number,
+  productCount: number,
+): InventorySearchSummary => {
+  const count = view === 'raw' ? rawMaterialCount : productCount;
+
+  if (view === 'raw') {
+    return {
+      count,
+      message: `${count} ${count === 1 ? 'materia prima encontrada' : 'materias primas encontradas'}`,
+    };
+  }
+
+  return {
+    count,
+    message: `${count} ${count === 1 ? 'producto encontrado' : 'productos encontrados'}`,
   };
 };

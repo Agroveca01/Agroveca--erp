@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  buildProductionCompletionPlan,
   findPackagingMatch,
   getBatchShelfLifeMonths,
   getRequiredMix,
@@ -144,5 +145,132 @@ describe('productionHelpers', () => {
       'Etiquetas insuficientes. Necesitas 12, tienes 0',
     ]);
     expect(getBatchShelfLifeMonths(product)).toBe(12);
+  });
+
+  it('builds the production completion plan with batch metadata and packaging consumption', () => {
+    const product = {
+      id: 'p2',
+      name: 'Sustrato Premium',
+      product_id: 'CTP-002',
+      format: '5L',
+      product_type: 'sustrato' as const,
+      color: null,
+      aroma: null,
+      ph_target: null,
+      production_unit_liters: 5,
+      base_price: 8990,
+    };
+
+    const completionPlan = buildProductionCompletionPlan(
+      {
+        id: 'o1',
+        order_number: 'PROD-1001',
+        product_id: 'p2',
+        target_units: 12,
+        concentrate_required_liters: 0.6,
+        water_required_liters: 59.4,
+        status: 'pending',
+        validation_passed: true,
+        validation_errors: null,
+        started_at: '2026-03-27T00:00:00.000Z',
+        completed_at: null,
+        waste_units: 0,
+        waste_liters: 0,
+        notes: null,
+        created_at: '2026-03-27T00:00:00.000Z',
+        products: product,
+      },
+      [
+        {
+          id: 'i1',
+          item_type: 'envase',
+          item_name: 'Bidon',
+          format: '5L',
+          current_stock: 20,
+          min_stock_alert: 2,
+          optimal_stock: 30,
+          unit_cost_net: 1000,
+          location: null,
+          last_updated: '2026-03-26T00:00:00.000Z',
+          created_at: '2026-03-26T00:00:00.000Z',
+        },
+        {
+          id: 'i2',
+          item_type: 'tapa',
+          item_name: 'Tapa 5L',
+          format: '5L',
+          current_stock: 20,
+          min_stock_alert: 2,
+          optimal_stock: 30,
+          unit_cost_net: 150,
+          location: null,
+          last_updated: '2026-03-26T00:00:00.000Z',
+          created_at: '2026-03-26T00:00:00.000Z',
+        },
+        {
+          id: 'i3',
+          item_type: 'etiqueta',
+          item_name: 'Etiqueta 5L',
+          format: '5L',
+          current_stock: 20,
+          min_stock_alert: 2,
+          optimal_stock: 30,
+          unit_cost_net: 50,
+          location: null,
+          last_updated: '2026-03-26T00:00:00.000Z',
+          created_at: '2026-03-26T00:00:00.000Z',
+        },
+      ],
+      2,
+      5,
+      '2026-03-27T15:30:00.000Z',
+      'BATCH-CTP-002-123',
+    );
+
+    expect(completionPlan).not.toBeNull();
+    expect(completionPlan?.summary).toEqual({
+      successfulUnits: 10,
+      successfulLiters: 55,
+      batchDate: '2026-03-27',
+      expirationDate: '2027-03-27',
+      shelfLifeMonths: 12,
+      alertThresholdMonths: 9,
+    });
+    expect(completionPlan?.packagingConsumptions).toEqual([
+      {
+        packagingItemId: 'i1',
+        nextStock: 8,
+        movementQuantity: -12,
+        itemLabel: 'Envases',
+        notes: 'Envases usado en orden PROD-1001',
+      },
+      {
+        packagingItemId: 'i2',
+        nextStock: 8,
+        movementQuantity: -12,
+        itemLabel: 'Tapas/Gatillos',
+        notes: 'Tapas/Gatillos usado en orden PROD-1001',
+      },
+      {
+        packagingItemId: 'i3',
+        nextStock: 8,
+        movementQuantity: -12,
+        itemLabel: 'Etiquetas',
+        notes: 'Etiquetas usado en orden PROD-1001',
+      },
+    ]);
+    expect(completionPlan?.batchInsert).toMatchObject({
+      product_id: 'p2',
+      production_order_id: 'o1',
+      batch_number: 'BATCH-CTP-002-123',
+      batch_date: '2026-03-27',
+      production_date: '2026-03-27',
+      expiration_date: '2027-03-27',
+      shelf_life_months: 12,
+      alert_threshold_months: 9,
+      quantity_liters: 55,
+      units_produced: 10,
+      notes: 'Generado desde orden PROD-1001. Lote RTU producido - 10 unidades',
+    });
   });
 });

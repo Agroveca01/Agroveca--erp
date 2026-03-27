@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  buildSalesOrderCreationPayloads,
   calculateSalesSimulation,
   getChannelColor,
   getSalesDashboardSummary,
@@ -48,6 +49,71 @@ describe('salesHelpers', () => {
       totalRevenue: 7450000,
       totalOrders: 150,
       avgDiscount: 0.6711409395973155,
+    });
+  });
+
+  it('builds linked customer order and sales order payloads from the same sale', () => {
+    expect(
+      buildSalesOrderCreationPayloads({
+        product: {
+          id: 'p1',
+          name: 'Limpiador Citrus',
+          product_id: 'CTP-001',
+          format: '500cc RTU',
+          product_type: 'rtu-gatillo',
+          color: null,
+          aroma: null,
+          ph_target: null,
+          production_unit_liters: 0.5,
+          base_price: 5990,
+          units_per_batch: 200,
+        },
+        businessConfig: {
+          id: 'cfg1',
+          company_name: 'CTP',
+          currency: 'CLP',
+          shopify_commission_pct: 8,
+          meta_ads_budget: 100000,
+          target_monthly_sales: 5000000,
+          shipping_cost: 3500,
+          default_margin_target: 40,
+        },
+        quantity: 3,
+        channel: 'shopify',
+        notes: 'Cliente recurrente',
+        orderNumber: 'ORD-123',
+        orderDate: '2026-03-27',
+      }),
+    ).toEqual({
+      customerOrder: {
+        order_number: 'ORD-123',
+        order_date: '2026-03-27',
+        total_amount: 21470,
+        items: [
+          {
+            product_id: 'p1',
+            name: 'Limpiador Citrus',
+            quantity: 3,
+            unit_price: 5990,
+            sku: 'CTP-001',
+          },
+        ],
+        status: 'pending',
+      },
+      salesOrder: {
+        order_number: 'ORD-123',
+        product_id: 'p1',
+        quantity: 3,
+        unit_price: 5990,
+        subtotal: 17970,
+        commission: 1437.6,
+        shipping_cost: 3500,
+        total_amount: 21470,
+        channel: 'shopify',
+        order_date: '2026-03-27',
+        status: 'completed',
+        notes: 'Cliente recurrente',
+      },
     });
   });
 });
