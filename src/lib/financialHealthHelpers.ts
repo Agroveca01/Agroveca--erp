@@ -44,6 +44,11 @@ export interface PaymentScoreBadge {
   label: string;
 }
 
+export interface CustomerRankBadge {
+  className: string;
+  label: string;
+}
+
 export const getLiquiditySummary = (
   payables: AccountsPayable[],
   receivables: AccountsReceivable[],
@@ -120,6 +125,34 @@ export const getPaymentScoreBadge = (score: string): PaymentScoreBadge => {
   return {
     className: 'bg-red-100 text-red-800',
     label: `Score: ${score}`,
+  };
+};
+
+export const getCustomerRankBadge = (index: number): CustomerRankBadge => {
+  if (index === 0) {
+    return {
+      className: 'bg-amber-500',
+      label: '1',
+    };
+  }
+
+  if (index === 1) {
+    return {
+      className: 'bg-slate-400',
+      label: '2',
+    };
+  }
+
+  if (index === 2) {
+    return {
+      className: 'bg-orange-600',
+      label: '3',
+    };
+  }
+
+  return {
+    className: 'bg-slate-600',
+    label: String(index + 1),
   };
 };
 

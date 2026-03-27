@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  getCustomerRankBadge,
   getLiquidityTone,
   getLiquiditySummary,
   getMonthlyCompletedOrders,
@@ -117,6 +118,16 @@ describe('financialHealthHelpers', () => {
     expect(getPaymentScoreBadge('C')).toEqual({
       className: 'bg-red-100 text-red-800',
       label: 'Score: C',
+    });
+
+    expect(getCustomerRankBadge(0)).toEqual({
+      className: 'bg-amber-500',
+      label: '1',
+    });
+
+    expect(getCustomerRankBadge(3)).toEqual({
+      className: 'bg-slate-600',
+      label: '4',
     });
   });
 });

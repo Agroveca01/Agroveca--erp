@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { TrendingUp, TrendingDown, AlertCircle, DollarSign, BarChart3, PieChart } from 'lucide-react';
 import { supabase, AccountsPayable, AccountsReceivable, Customer, CustomerOrder, SalesOrder } from '../lib/supabase';
 import {
+  getCustomerRankBadge,
   getLiquidityTone,
   getLiquiditySummary,
   getMonthlyCompletedOrders,
@@ -177,14 +178,14 @@ export default function FinancialHealthModule() {
               </div>
             )}
 
-              {topCustomers.map((customer, index) => (
-              <div key={customer.id} className="bg-slate-800/50 rounded-lg p-4">
+              {topCustomers.map((customer, index) => {
+                const rankBadge = getCustomerRankBadge(index);
+
+                return <div key={customer.id} className="bg-slate-800/50 rounded-lg p-4">
                 <div className="flex items-start justify-between mb-2">
                   <div className="flex items-center space-x-2">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold ${
-                      index === 0 ? 'bg-amber-500' : index === 1 ? 'bg-slate-400' : index === 2 ? 'bg-orange-600' : 'bg-slate-600'
-                    }`}>
-                      {index + 1}
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold ${rankBadge.className}`}>
+                      {rankBadge.label}
                     </div>
                     <div>
                       <div className="font-bold text-white">{customer.name}</div>
@@ -208,7 +209,7 @@ export default function FinancialHealthModule() {
                   );
                 })()}
               </div>
-            ))}
+                })}
           </div>
         </div>
       </div>
