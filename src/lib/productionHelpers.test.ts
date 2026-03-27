@@ -4,6 +4,7 @@ import {
   buildProductionOrderInsert,
   buildProductionCompletionPlan,
   findPackagingMatch,
+  getProductionOrderBacklogSummary,
   getBatchShelfLifeMonths,
   getRequiredMix,
   getUnitVolumeLiters,
@@ -187,6 +188,68 @@ describe('productionHelpers', () => {
       validation_passed: true,
       validation_errors: null,
       started_at: '2026-03-27T13:00:00.000Z',
+    });
+  });
+
+  it('summarizes the production backlog status and pending units', () => {
+    expect(
+      getProductionOrderBacklogSummary([
+        {
+          id: 'o1',
+          order_number: 'PROD-1',
+          product_id: 'p1',
+          target_units: 24,
+          concentrate_required_liters: 0.24,
+          water_required_liters: 23.76,
+          status: 'pending',
+          validation_passed: true,
+          validation_errors: null,
+          started_at: '2026-03-27T00:00:00.000Z',
+          completed_at: null,
+          waste_units: 0,
+          waste_liters: 0,
+          notes: null,
+          created_at: '2026-03-27T00:00:00.000Z',
+        },
+        {
+          id: 'o2',
+          order_number: 'PROD-2',
+          product_id: 'p2',
+          target_units: 10,
+          concentrate_required_liters: 0.1,
+          water_required_liters: 9.9,
+          status: 'completed',
+          validation_passed: true,
+          validation_errors: null,
+          started_at: '2026-03-27T00:00:00.000Z',
+          completed_at: '2026-03-27T02:00:00.000Z',
+          waste_units: 0,
+          waste_liters: 0,
+          notes: null,
+          created_at: '2026-03-27T00:00:00.000Z',
+        },
+        {
+          id: 'o3',
+          order_number: 'PROD-3',
+          product_id: 'p3',
+          target_units: 8,
+          concentrate_required_liters: 0.08,
+          water_required_liters: 7.92,
+          status: 'pending',
+          validation_passed: true,
+          validation_errors: null,
+          started_at: '2026-03-27T00:00:00.000Z',
+          completed_at: null,
+          waste_units: 0,
+          waste_liters: 0,
+          notes: null,
+          created_at: '2026-03-27T00:00:00.000Z',
+        },
+      ]),
+    ).toEqual({
+      pendingCount: 2,
+      completedCount: 1,
+      pendingUnits: 32,
     });
   });
 
