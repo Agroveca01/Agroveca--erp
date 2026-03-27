@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  buildProductionOrderInsert,
   buildProductionCompletionPlan,
   findPackagingMatch,
   getBatchShelfLifeMonths,
@@ -145,6 +146,48 @@ describe('productionHelpers', () => {
       'Etiquetas insuficientes. Necesitas 12, tienes 0',
     ]);
     expect(getBatchShelfLifeMonths(product)).toBe(12);
+  });
+
+  it('builds the production order insert payload from a passed validation', () => {
+    expect(
+      buildProductionOrderInsert(
+        {
+          product: {
+            id: 'p1',
+            name: 'Limpiador',
+            product_id: 'CTP-001',
+            format: '500cc',
+            product_type: 'rtu-gatillo',
+            color: null,
+            aroma: null,
+            ph_target: null,
+            production_unit_liters: 0.5,
+            base_price: 5990,
+          },
+          targetUnits: 24,
+          totalVolumeLiters: 12,
+          concentrateRequired: 0.12,
+          waterRequired: 11.88,
+          envase: undefined,
+          tapa: undefined,
+          etiqueta: undefined,
+          errors: [],
+          passed: true,
+        },
+        'PROD-123',
+        '2026-03-27T13:00:00.000Z',
+      ),
+    ).toEqual({
+      order_number: 'PROD-123',
+      product_id: 'p1',
+      target_units: 24,
+      concentrate_required_liters: 0.12,
+      water_required_liters: 11.88,
+      status: 'pending',
+      validation_passed: true,
+      validation_errors: null,
+      started_at: '2026-03-27T13:00:00.000Z',
+    });
   });
 
   it('builds the production completion plan with batch metadata and packaging consumption', () => {

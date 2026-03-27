@@ -44,6 +44,18 @@ export interface ProductionCompletionPlan {
   batchInsert: Omit<ProductionBatch, 'id'>;
 }
 
+export interface ProductionOrderInsert {
+  order_number: string;
+  product_id: string;
+  target_units: number;
+  concentrate_required_liters: number;
+  water_required_liters: number;
+  status: 'pending';
+  validation_passed: true;
+  validation_errors: null;
+  started_at: string;
+}
+
 export const parseFormatToLiters = (format: string): number | null => {
   const normalizedFormat = format.trim().toLowerCase();
   const numericMatch = normalizedFormat.match(/(\d+(?:[.,]\d+)?)/);
@@ -134,6 +146,24 @@ export const validateProductionInput = (
     etiqueta,
     errors,
     passed: errors.length === 0,
+  };
+};
+
+export const buildProductionOrderInsert = (
+  validation: ProductionValidationResult,
+  orderNumber: string,
+  startedAt: string,
+): ProductionOrderInsert => {
+  return {
+    order_number: orderNumber,
+    product_id: validation.product.id,
+    target_units: validation.targetUnits,
+    concentrate_required_liters: validation.concentrateRequired,
+    water_required_liters: validation.waterRequired,
+    status: 'pending',
+    validation_passed: true,
+    validation_errors: null,
+    started_at: startedAt,
   };
 };
 

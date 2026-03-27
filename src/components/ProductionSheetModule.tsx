@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Beaker, CheckCircle, XCircle, AlertTriangle, Droplet, FileText } from 'lucide-react';
 import {
+  buildProductionOrderInsert,
   buildProductionCompletionPlan,
   ProductionValidationResult,
   validateProductionInput,
@@ -64,22 +65,11 @@ export default function ProductionSheetModule() {
     try {
       const orderNumber = `PROD-${Date.now()}`;
       const startedAt = new Date().toISOString();
+      const orderInsert = buildProductionOrderInsert(validation, orderNumber, startedAt);
 
       const { error } = await supabase
         .from('production_orders')
-        .insert([
-          {
-            order_number: orderNumber,
-            product_id: validation.product.id,
-            target_units: validation.targetUnits,
-            concentrate_required_liters: validation.concentrateRequired,
-            water_required_liters: validation.waterRequired,
-            status: 'pending',
-            validation_passed: true,
-            validation_errors: null,
-            started_at: startedAt,
-          },
-        ])
+        .insert([orderInsert])
         .select()
         .single();
 
