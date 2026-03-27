@@ -1,12 +1,14 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  buildReceivableCollectionPlan,
   getCustomerRankBadge,
   getLiquidityTone,
   getLiquiditySummary,
   getMonthlyCompletedOrders,
   getNetCashFlowTone,
   getPaymentScoreBadge,
+  getReceivableStatusBadge,
   getReceivablesAgingSummary,
   getRevenueChannels,
   getTopCustomers,
@@ -128,6 +130,47 @@ describe('financialHealthHelpers', () => {
     expect(getCustomerRankBadge(3)).toEqual({
       className: 'bg-slate-600',
       label: '4',
+    });
+
+    expect(getReceivableStatusBadge(0)).toEqual({
+      className: 'bg-green-100 text-green-800',
+      label: 'Vigente',
+    });
+
+    expect(getReceivableStatusBadge(12)).toEqual({
+      className: 'bg-yellow-100 text-yellow-800',
+      label: 'Atrasado',
+    });
+
+    expect(getReceivableStatusBadge(45)).toEqual({
+      className: 'bg-red-100 text-red-800',
+      label: 'Critico',
+    });
+  });
+
+  it('builds the receivable collection plan', () => {
+    expect(
+      buildReceivableCollectionPlan({
+        id: 'r10',
+        sales_order_id: null,
+        customer_id: 'c10',
+        customer_name: 'Cliente 10',
+        invoice_number: 'INV-10',
+        amount_due: 25000,
+        amount_paid: 0,
+        due_date: '2026-03-27',
+        status: 'pending',
+        days_overdue: 14,
+        payment_score: 'B',
+        created_at: '2026-03-01T00:00:00.000Z',
+        updated_at: '2026-03-01T00:00:00.000Z',
+      }),
+    ).toEqual({
+      receivableUpdate: {
+        status: 'paid',
+        amount_paid: 25000,
+        days_overdue: 0,
+      },
     });
   });
 });

@@ -5,6 +5,7 @@ import {
   canTransitionPreparedOrderStatus,
   filterPreparedOrders,
   getAllowedPreparedOrderStatuses,
+  getOrderTraceabilitySummary,
   getPreparedOrderStatusMeta,
   getPreparedOrderStatusOptions,
   isPreparedOrderStatus,
@@ -129,6 +130,7 @@ export default function OrderPreparationModule() {
     readyOrdersCount,
     shippedOrDeliveredCount,
   } = getOrderPreparationSummary(filteredOrders);
+  const traceabilitySummary = getOrderTraceabilitySummary(filteredOrders);
 
   return (
     <div className="space-y-6">
@@ -174,6 +176,14 @@ export default function OrderPreparationModule() {
           <p className="text-3xl font-bold text-white mb-1">{shippedOrDeliveredCount}</p>
           <p className="text-green-300 text-sm font-medium">En Tránsito/Entregados</p>
         </div>
+      </div>
+
+      <div className="bg-slate-900/40 border border-slate-700/50 rounded-xl p-4">
+        <p className="text-sm text-slate-300">
+          Cola operativa actual: <span className="font-bold text-cyan-300">{traceabilitySummary.totalUnitsQueued} unidades</span> en
+          <span className="font-bold text-white"> {traceabilitySummary.stillInFulfillmentCount} ordenes</span> aun en preparacion, y
+          <span className="font-bold text-emerald-300"> {traceabilitySummary.readyForDispatchCount} ordenes</span> listas para despacho.
+        </p>
       </div>
 
       {vipMilestoneOrders.length > 0 && (
