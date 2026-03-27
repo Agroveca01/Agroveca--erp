@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { FlaskConical, Plus, Calendar, CreditCard as Edit, Trash2, X } from 'lucide-react';
 import { supabase, Product, ProductRecipe, ProductionBatch, RawMaterial } from '../lib/supabase';
 import {
+  buildProductionBatchConsumptionPlan,
   calculateProductionBatchCosts,
   getEstimatedRawMaterialUnitCost,
   getRecipeCostPer100Liters,
@@ -277,7 +278,6 @@ export default function ProductionModule() {
     if (!selectedProduct) return;
 
     try {
-      const multiplier = batchForm.quantity_liters / 100;
       const costSummary = calculateProductionBatchCosts(
         recipes,
         batchForm.quantity_liters,
@@ -285,6 +285,7 @@ export default function ProductionModule() {
       );
 
       const batchNumber = `BATCH-${selectedProduct.product_id}-${Date.now()}`;
+      const consumptionPlan = buildProductionBatchConsumptionPlan(recipes, batchForm.quantity_liters, batchNumber);
 
       const { error: batchError } = await supabase
         .from('production_batches')
@@ -302,23 +303,21 @@ export default function ProductionModule() {
 
       if (batchError) throw batchError;
 
-      for (const recipe of recipes) {
-        const quantityUsed = recipe.quantity_per_100l * multiplier;
-
+      for (const consumption of consumptionPlan) {
         const { data: currentMaterial, error: fetchError } = await supabase
           .from('raw_materials')
           .select('stock_quantity')
-          .eq('id', recipe.raw_material_id)
+          .eq('id', consumption.rawMaterialId)
           .single();
 
         if (fetchError) throw fetchError;
 
-        const newStock = currentMaterial.stock_quantity - quantityUsed;
+        const newStock = currentMaterial.stock_quantity - consumption.quantityUsed;
 
         const { error: updateError } = await supabase
           .from('raw_materials')
           .update({ stock_quantity: newStock })
-          .eq('id', recipe.raw_material_id);
+          .eq('id', consumption.rawMaterialId);
 
         if (updateError) throw updateError;
 
@@ -326,9 +325,9 @@ export default function ProductionModule() {
           .from('inventory_transactions')
           .insert({
             transaction_type: 'production_use',
-            raw_material_id: recipe.raw_material_id,
-            quantity: -quantityUsed,
-            notes: `Usado en lote ${batchNumber}`,
+            raw_material_id: consumption.rawMaterialId,
+            quantity: -consumption.quantityUsed,
+            notes: consumption.notes,
           });
       }
 

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  buildInvoiceInventoryResolutionPlan,
   calculateInvoiceTotals,
   EMPTY_LINE_ITEM,
   getCreditDueDate,
@@ -89,5 +90,89 @@ describe('purchaseInvoiceHelpers', () => {
         packaging_inventory_id: null,
       },
     ]);
+  });
+
+  it('builds inventory resolution plans for inserts and stock updates from invoice lines', () => {
+    const inventory = [
+      {
+        id: 'inv-1',
+        item_type: 'envase',
+        item_name: 'Botella PET',
+        format: '500cc',
+        current_stock: 20,
+        min_stock_alert: 5,
+        optimal_stock: 40,
+        unit_cost_net: 120,
+        location: null,
+        last_updated: '2026-03-26T00:00:00.000Z',
+        created_at: '2026-03-26T00:00:00.000Z',
+      },
+    ];
+
+    expect(
+      buildInvoiceInventoryResolutionPlan(
+        {
+          ...EMPTY_LINE_ITEM,
+          item_type: 'envase',
+          item_name: 'Botella PET',
+          format: ' 500cc ',
+          quantity: 12,
+          unit_price_net: 100,
+          line_total_net: 1200,
+        },
+        'F-100',
+        inventory,
+      ),
+    ).toEqual({
+      normalizedFormat: '500cc',
+      packagingInventoryId: 'inv-1',
+      shouldInsertInventory: false,
+      inventoryInsertPayload: null,
+      inventoryUpdatePayload: {
+        id: 'inv-1',
+        current_stock: 32,
+        unit_cost_net: 100,
+      },
+      movementPayload: {
+        movement_type: 'entrada',
+        quantity: 12,
+        reference_type: 'purchase_invoice',
+        notes: 'Factura F-100',
+      },
+    });
+
+    expect(
+      buildInvoiceInventoryResolutionPlan(
+        {
+          ...EMPTY_LINE_ITEM,
+          item_type: 'etiqueta',
+          item_name: 'Etiqueta Nueva',
+          format: ' 250cc ',
+          quantity: 30,
+          unit_price_net: 50,
+          line_total_net: 1500,
+        },
+        'F-200',
+        inventory,
+      ),
+    ).toEqual({
+      normalizedFormat: '250cc',
+      packagingInventoryId: null,
+      shouldInsertInventory: true,
+      inventoryInsertPayload: {
+        item_type: 'etiqueta',
+        item_name: 'Etiqueta Nueva',
+        format: '250cc',
+        current_stock: 30,
+        unit_cost_net: 50,
+      },
+      inventoryUpdatePayload: null,
+      movementPayload: {
+        movement_type: 'entrada',
+        quantity: 30,
+        reference_type: 'purchase_invoice',
+        notes: 'Factura F-200',
+      },
+    });
   });
 });

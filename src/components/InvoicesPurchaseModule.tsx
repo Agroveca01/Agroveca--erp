@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Plus, Trash2, Save } from 'lucide-react';
 import { supabase, Supplier, PackagingInventory, PurchaseInvoice } from '../lib/supabase';
-import { findPackagingInventoryMatch, normalizeInventoryFormat } from '../lib/purchasesHelpers';
 import {
+  buildInvoiceInventoryResolutionPlan,
   calculateInvoiceTotals,
   EMPTY_LINE_ITEM,
   getCreditDueDate,
@@ -97,42 +97,28 @@ export default function InvoicesPurchaseModule() {
       const inventoryResolvedItems: InvoiceLineItem[] = [];
 
       for (const item of lineItems.filter((lineItem) => lineItem.quantity > 0)) {
-        const normalizedFormat = normalizeInventoryFormat(item.format);
+        const inventoryPlan = buildInvoiceInventoryResolutionPlan(item, invoiceNumber, inventory);
+        let packagingInventoryId = inventoryPlan.packagingInventoryId;
 
-        let packagingInventoryId = item.packaging_inventory_id;
-        let existingItem = packagingInventoryId
-          ? inventory.find((inv) => inv.id === packagingInventoryId)
-          : findPackagingInventoryMatch(inventory, item.item_type, item.item_name, normalizedFormat);
-
-        if (!existingItem) {
+        if (inventoryPlan.shouldInsertInventory && inventoryPlan.inventoryInsertPayload) {
           const { data: newInventoryItem, error: inventoryInsertError } = await supabase
             .from('packaging_inventory')
-            .insert([
-              {
-                item_type: item.item_type,
-                item_name: item.item_name,
-                format: normalizedFormat,
-                current_stock: item.quantity,
-                unit_cost_net: item.unit_price_net,
-              },
-            ])
+            .insert([inventoryPlan.inventoryInsertPayload])
             .select()
             .single();
 
           if (inventoryInsertError) throw inventoryInsertError;
 
           packagingInventoryId = newInventoryItem.id;
-          existingItem = newInventoryItem;
-        } else {
-          packagingInventoryId = existingItem.id;
-
+        } else if (inventoryPlan.inventoryUpdatePayload) {
+          packagingInventoryId = inventoryPlan.inventoryUpdatePayload.id;
           const { error: inventoryUpdateError } = await supabase
             .from('packaging_inventory')
             .update({
-              current_stock: existingItem.current_stock + item.quantity,
-              unit_cost_net: item.unit_price_net,
+              current_stock: inventoryPlan.inventoryUpdatePayload.current_stock,
+              unit_cost_net: inventoryPlan.inventoryUpdatePayload.unit_cost_net,
             })
-            .eq('id', existingItem.id);
+            .eq('id', inventoryPlan.inventoryUpdatePayload.id);
 
           if (inventoryUpdateError) throw inventoryUpdateError;
         }
@@ -140,11 +126,11 @@ export default function InvoicesPurchaseModule() {
         const { error: movementError } = await supabase.from('inventory_movements').insert([
           {
             packaging_inventory_id: packagingInventoryId,
-            movement_type: 'entrada',
-            quantity: item.quantity,
+            movement_type: inventoryPlan.movementPayload.movement_type,
+            quantity: inventoryPlan.movementPayload.quantity,
             reference_id: invoice.id,
-            reference_type: 'purchase_invoice',
-            notes: `Factura ${invoiceNumber}`,
+            reference_type: inventoryPlan.movementPayload.reference_type,
+            notes: inventoryPlan.movementPayload.notes,
           },
         ]);
 
@@ -152,7 +138,7 @@ export default function InvoicesPurchaseModule() {
 
         inventoryResolvedItems.push({
           ...item,
-          format: normalizedFormat || '',
+          format: inventoryPlan.normalizedFormat || '',
           packaging_inventory_id: packagingInventoryId,
         });
       }

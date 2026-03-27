@@ -14,6 +14,12 @@ export interface ProductionCostSummary {
   costPerUnit: number;
 }
 
+export interface ProductionBatchConsumptionPlan {
+  rawMaterialId: string;
+  quantityUsed: number;
+  notes: string;
+}
+
 export const getRecipeCostPer100Liters = (recipes: RecipeWithCost[]): number => {
   return recipes.reduce((total, recipe) => {
     return total + (recipe.raw_materials?.current_cost || 0) * recipe.quantity_per_100l;
@@ -61,4 +67,18 @@ export const calculateProductionBatchCosts = (
     totalCost,
     costPerUnit: unitsProduced > 0 ? totalCost / unitsProduced : 0,
   };
+};
+
+export const buildProductionBatchConsumptionPlan = (
+  recipes: (RecipeWithCost & { raw_material_id: string })[],
+  quantityLiters: number,
+  batchNumber: string,
+): ProductionBatchConsumptionPlan[] => {
+  const multiplier = quantityLiters / 100;
+
+  return recipes.map((recipe) => ({
+    rawMaterialId: recipe.raw_material_id,
+    quantityUsed: recipe.quantity_per_100l * multiplier,
+    notes: `Usado en lote ${batchNumber}`,
+  }));
 };

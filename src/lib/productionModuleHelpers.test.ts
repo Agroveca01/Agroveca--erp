@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  buildProductionBatchConsumptionPlan,
   calculateProductionBatchCosts,
   getEstimatedRawMaterialUnitCost,
   getRecipeCostPer100Liters,
@@ -53,5 +54,20 @@ describe('productionModuleHelpers', () => {
       totalCost: 67500,
       costPerUnit: 281.25,
     });
+  });
+
+  it('builds raw material consumption plan for a production batch', () => {
+    expect(buildProductionBatchConsumptionPlan(recipes, 150, 'BATCH-CTP-001-123')).toEqual([
+      {
+        rawMaterialId: 'm1',
+        quantityUsed: 3,
+        notes: 'Usado en lote BATCH-CTP-001-123',
+      },
+      {
+        rawMaterialId: 'm2',
+        quantityUsed: 2.25,
+        notes: 'Usado en lote BATCH-CTP-001-123',
+      },
+    ]);
   });
 });

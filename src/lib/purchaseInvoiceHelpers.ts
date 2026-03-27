@@ -20,6 +20,30 @@ export interface InvoiceTotals {
   totalAmount: number;
 }
 
+export interface ResolvedInvoiceInventoryPlan {
+  normalizedFormat: string;
+  packagingInventoryId: string | null;
+  shouldInsertInventory: boolean;
+  inventoryInsertPayload: {
+    item_type: string;
+    item_name: string;
+    format: string;
+    current_stock: number;
+    unit_cost_net: number;
+  } | null;
+  inventoryUpdatePayload: {
+    id: string;
+    current_stock: number;
+    unit_cost_net: number;
+  } | null;
+  movementPayload: {
+    movement_type: 'entrada';
+    quantity: number;
+    reference_type: 'purchase_invoice';
+    notes: string;
+  };
+}
+
 export const EMPTY_LINE_ITEM: InvoiceLineItem = {
   item_type: 'envase',
   item_name: '',
@@ -91,4 +115,43 @@ export const normalizeInvoiceItemsForInsert = (invoiceId: string, lineItems: Inv
       line_total_net: item.line_total_net,
       packaging_inventory_id: item.packaging_inventory_id,
     }));
+};
+
+export const buildInvoiceInventoryResolutionPlan = (
+  item: InvoiceLineItem,
+  invoiceNumber: string,
+  inventory: PackagingInventory[],
+): ResolvedInvoiceInventoryPlan => {
+  const normalizedFormat = normalizeInventoryFormat(item.format) || '';
+  const existingItem = item.packaging_inventory_id
+    ? inventory.find((inventoryItem) => inventoryItem.id === item.packaging_inventory_id)
+    : findPackagingInventoryMatch(inventory, item.item_type, item.item_name, normalizedFormat);
+
+  return {
+    normalizedFormat,
+    packagingInventoryId: existingItem?.id || item.packaging_inventory_id,
+    shouldInsertInventory: !existingItem,
+    inventoryInsertPayload: existingItem
+      ? null
+      : {
+          item_type: item.item_type,
+          item_name: item.item_name,
+          format: normalizedFormat,
+          current_stock: item.quantity,
+          unit_cost_net: item.unit_price_net,
+        },
+    inventoryUpdatePayload: existingItem
+      ? {
+          id: existingItem.id,
+          current_stock: existingItem.current_stock + item.quantity,
+          unit_cost_net: item.unit_price_net,
+        }
+      : null,
+    movementPayload: {
+      movement_type: 'entrada',
+      quantity: item.quantity,
+      reference_type: 'purchase_invoice',
+      notes: `Factura ${invoiceNumber}`,
+    },
+  };
 };
