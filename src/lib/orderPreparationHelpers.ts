@@ -41,6 +41,16 @@ export interface FilterablePreparedOrder {
   };
 }
 
+export interface TraceablePreparedOrder extends FilterablePreparedOrder {
+  items?: CustomerOrderItem[];
+}
+
+export interface OrderTraceabilitySummary {
+  readyForDispatchCount: number;
+  stillInFulfillmentCount: number;
+  totalUnitsQueued: number;
+}
+
 export const getPreparedOrderStatusOptions = (): PreparedOrderStatusOption[] => {
   return Object.values(PREPARED_ORDER_STATUS_META).map(({ value, label }) => ({ value, label }));
 };
@@ -74,6 +84,21 @@ export const canTransitionPreparedOrderStatus = (currentStatus: string, nextStat
   }
 
   return PREPARED_ORDER_STATUS_TRANSITIONS[currentStatus].includes(nextStatus);
+};
+
+export const getOrderTraceabilitySummary = <T extends TraceablePreparedOrder>(orders: T[]): OrderTraceabilitySummary => {
+  const readyForDispatch = orders.filter((order) => order.status === 'ready' || order.status === 'shipped');
+  const stillInFulfillment = orders.filter((order) => order.status === 'pending' || order.status === 'preparing');
+  const totalUnitsQueued = stillInFulfillment.reduce(
+    (sum, order) => sum + (order.items || []).reduce((itemSum, item) => itemSum + (item.quantity || 0), 0),
+    0,
+  );
+
+  return {
+    readyForDispatchCount: readyForDispatch.length,
+    stillInFulfillmentCount: stillInFulfillment.length,
+    totalUnitsQueued,
+  };
 };
 
 export const sanitizeOrderItems = (items: CustomerOrderItem[] | null | undefined) => {

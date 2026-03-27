@@ -2,12 +2,14 @@ import { useState, useEffect } from 'react';
 import { TrendingUp, TrendingDown, AlertCircle, DollarSign, BarChart3, PieChart } from 'lucide-react';
 import { supabase, AccountsPayable, AccountsReceivable, Customer, CustomerOrder, SalesOrder } from '../lib/supabase';
 import {
+  buildReceivableCollectionPlan,
   getCustomerRankBadge,
   getLiquidityTone,
   getLiquiditySummary,
   getMonthlyCompletedOrders,
   getNetCashFlowTone,
   getPaymentScoreBadge,
+  getReceivableStatusBadge,
   getReceivablesAgingSummary,
   getRevenueChannels,
   getTopCustomers,
@@ -41,6 +43,28 @@ export default function FinancialHealthModule() {
       setCustomers(customersData.data || []);
     } catch (error) {
       console.error('Error loading data:', error);
+    }
+  };
+
+  const markReceivableAsCollected = async (receivableId: string) => {
+    const receivable = receivables.find((item) => item.id === receivableId);
+    if (!receivable) return;
+
+    if (!confirm('¿Confirmar cobro de esta cuenta por cobrar?')) return;
+
+    try {
+      const collectionPlan = buildReceivableCollectionPlan(receivable);
+
+      await supabase
+        .from('accounts_receivable')
+        .update(collectionPlan.receivableUpdate)
+        .eq('id', receivableId);
+
+      alert('Cobro registrado exitosamente');
+      loadData();
+    } catch (error) {
+      console.error('Error marking receivable as collected:', error);
+      alert('Error al registrar el cobro');
     }
   };
 
@@ -230,11 +254,47 @@ export default function FinancialHealthModule() {
                 <p className="text-sm text-yellow-300 mt-1">{formatCurrency(receivablesAging.overdue1to15.totalAmount)}</p>
               </div>
 
-              <div className="bg-red-900/30 rounded-lg p-5 border-2 border-red-500/50">
-                <h4 className="font-bold text-red-200 mb-2">Crítico (+30 días)</h4>
-                <p className="text-3xl font-bold text-red-400">{receivablesAging.critical.count}</p>
-                <p className="text-sm text-red-300 mt-1">{formatCurrency(receivablesAging.critical.totalAmount)}</p>
+               <div className="bg-red-900/30 rounded-lg p-5 border-2 border-red-500/50">
+                 <h4 className="font-bold text-red-200 mb-2">Crítico (+30 días)</h4>
+                 <p className="text-3xl font-bold text-red-400">{receivablesAging.critical.count}</p>
+                 <p className="text-sm text-red-300 mt-1">{formatCurrency(receivablesAging.critical.totalAmount)}</p>
+               </div>
+        </div>
+
+        <div className="mt-6 space-y-3">
+          {receivables.length === 0 && (
+            <div className="bg-slate-800/50 rounded-lg p-4 text-sm text-slate-400">
+              No hay cuentas por cobrar pendientes.
+            </div>
+          )}
+
+          {receivables.map((receivable) => {
+            const statusBadge = getReceivableStatusBadge(receivable.days_overdue);
+
+            return (
+              <div key={receivable.id} className="bg-slate-800/50 rounded-lg p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                <div>
+                  <div className="font-bold text-white">{receivable.customer_name}</div>
+                  <div className="text-xs text-slate-400">
+                    {receivable.invoice_number || 'Sin factura'} - vence {new Date(receivable.due_date).toLocaleDateString('es-CL')}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <span className={`px-2 py-1 text-xs font-semibold rounded-full ${statusBadge.className}`}>
+                    {statusBadge.label}
+                  </span>
+                  <span className="font-bold text-white">{formatCurrency(receivable.amount_due)}</span>
+                  <button
+                    onClick={() => markReceivableAsCollected(receivable.id)}
+                    className="px-3 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-xs font-semibold"
+                  >
+                    Marcar cobro
+                  </button>
+                </div>
               </div>
+            );
+          })}
         </div>
       </div>
     </div>

@@ -4,6 +4,7 @@ import {
   canTransitionPreparedOrderStatus,
   filterPreparedOrders,
   getAllowedPreparedOrderStatuses,
+  getOrderTraceabilitySummary,
   getPreparedOrderStatusMeta,
   sanitizeOrderItems,
 } from './orderPreparationHelpers';
@@ -85,5 +86,40 @@ describe('orderPreparationHelpers', () => {
     expect(canTransitionPreparedOrderStatus('pending', 'delivered')).toBe(false);
     expect(canTransitionPreparedOrderStatus('shipped', 'delivered')).toBe(true);
     expect(canTransitionPreparedOrderStatus('cancelled', 'pending')).toBe(false);
+  });
+
+  it('summarizes queued and dispatch-ready orders for traceability', () => {
+    expect(
+      getOrderTraceabilitySummary([
+        {
+          id: 'o1',
+          order_number: 'ORD-1',
+          status: 'pending',
+          reward_eligible: false,
+          reward_included: false,
+          items: [{ quantity: 2 }],
+        },
+        {
+          id: 'o2',
+          order_number: 'ORD-2',
+          status: 'preparing',
+          reward_eligible: false,
+          reward_included: false,
+          items: [{ quantity: 1 }, { quantity: 3 }],
+        },
+        {
+          id: 'o3',
+          order_number: 'ORD-3',
+          status: 'ready',
+          reward_eligible: false,
+          reward_included: false,
+          items: [{ quantity: 5 }],
+        },
+      ]),
+    ).toEqual({
+      readyForDispatchCount: 1,
+      stillInFulfillmentCount: 2,
+      totalUnitsQueued: 6,
+    });
   });
 });

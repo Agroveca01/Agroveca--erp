@@ -49,6 +49,19 @@ export interface CustomerRankBadge {
   label: string;
 }
 
+export interface ReceivableCollectionPlan {
+  receivableUpdate: {
+    status: 'paid';
+    amount_paid: number;
+    days_overdue: 0;
+  };
+}
+
+export interface ReceivableStatusBadge {
+  className: string;
+  label: string;
+}
+
 export const getLiquiditySummary = (
   payables: AccountsPayable[],
   receivables: AccountsReceivable[],
@@ -153,6 +166,39 @@ export const getCustomerRankBadge = (index: number): CustomerRankBadge => {
   return {
     className: 'bg-slate-600',
     label: String(index + 1),
+  };
+};
+
+export const buildReceivableCollectionPlan = (
+  receivable: AccountsReceivable,
+): ReceivableCollectionPlan => {
+  return {
+    receivableUpdate: {
+      status: 'paid',
+      amount_paid: receivable.amount_due,
+      days_overdue: 0,
+    },
+  };
+};
+
+export const getReceivableStatusBadge = (daysOverdue: number): ReceivableStatusBadge => {
+  if (daysOverdue > 30) {
+    return {
+      className: 'bg-red-100 text-red-800',
+      label: 'Critico',
+    };
+  }
+
+  if (daysOverdue > 0) {
+    return {
+      className: 'bg-yellow-100 text-yellow-800',
+      label: 'Atrasado',
+    };
+  }
+
+  return {
+    className: 'bg-green-100 text-green-800',
+    label: 'Vigente',
   };
 };
 
