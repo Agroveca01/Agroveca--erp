@@ -321,7 +321,7 @@ Traducir los riesgos y gaps detectados en `PRD.md` en un backlog tecnico acciona
 - P2-01: resuelto.
 - P2-02: resuelto en baseline.
 - P2-03: resuelto en baseline.
-- Siguiente foco recomendado: ampliar cobertura automatizada mas alla del baseline en inventario/produccion y mantener backlog/documentacion sincronizados.
+- Siguiente foco recomendado: mantener backlog/documentacion sincronizados, decidir el cierre formal del MVP estabilizado y abrir el siguiente bloque mayor de roadmap (VIP real, trazabilidad mas profunda o automatizacion comercial).
 
 1. P0.1 Salud de compilacion TypeScript
 2. P0.2 Normalizacion de roles
@@ -335,6 +335,14 @@ Traducir los riesgos y gaps detectados en `PRD.md` en un backlog tecnico acciona
 10. P2.11 Validaciones automatizadas minimas
 11. P2.12 Alineacion continua de documentacion
 12. Nuevo bloque funcional o de trazabilidad segun roadmap vigente
+
+## Nota de estado posterior a Sprint 1 y Sprint 2
+
+- La cobertura helper-driven se amplio sobre compras, inventario, produccion, ventas, despacho y finanzas.
+- Cuentas por pagar ya cuentan con flujo de pago helper-driven.
+- Cuentas por cobrar ya tienen una accion minima operativa de cobro desde `FinancialHealthModule`.
+- Produccion y despacho ahora muestran backlog y cola operativa con helpers compartidos.
+- El gap principal explicitamente pendiente para cerrar el MVP estabilizado sigue siendo VIP real o su exclusion formal del alcance inmediato.
 
 ## Resultado esperado
 

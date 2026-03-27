@@ -70,13 +70,16 @@ Necesita cotizar, vender, dar seguimiento a clientes, operar CRM/VIP, preparar p
 - modulos de inventario, produccion, ventas, CRM, Shopify, compras, proveedores, cuentas por pagar y fiscalidad;
 - herramientas operativas complementarias como QR, avisos, tareas y KPIs;
 - base Supabase con tablas, triggers, RLS y edge functions que soportan gran parte del dominio;
-- baseline de validaciones automatizadas sobre helpers fiscales, recovery auth, permisos y payloads Shopify.
+- baseline de validaciones automatizadas sobre helpers fiscales, recovery auth, permisos y payloads Shopify;
+- endurecimiento incremental de compras, inventario, produccion, ventas, preparacion/despacho y salud financiera mediante helpers probados;
+- accion minima de cobranzas en `accounts_receivable` desde el dashboard financiero;
+- visibilidad helper-driven de cola operativa de despacho y backlog de produccion.
 
 ### Capacidades parcialmente implementadas o con deuda
 
 - email VIP modelado como simulacion explicita, pero sin proveedor real de correo;
-- crecimiento de cobertura automatizada aun parcial en inventario y produccion;
-- coexistencia de mas de un modelo para produccion/lotes;
+- crecimiento de cobertura automatizada aun parcial si se abren nuevos flujos complejos en inventario o produccion;
+- coexistencia de mas de un modelo para produccion/lotes, aunque el flujo base ya esta mucho mas alineado que en baseline;
 - documentacion operativa que debe seguir alineandose cuando cambian los flujos.
 
 ### Riesgos del estado actual
@@ -105,11 +108,11 @@ Operar el negocio completo de Cuida Tu Planta desde CTP ERP con datos confiables
 
 ### MVP estabilizado
 
-Consolidar el ERP actual como herramienta operativa confiable, corrigiendo desalineaciones de tipos, roles y flujos base para inventario, produccion, ventas, compras y fiscalidad.
+Consolidar el ERP actual como herramienta operativa confiable, corrigiendo desalineaciones de tipos, roles y flujos base para inventario, produccion, ventas, compras y fiscalidad. Tras los ultimos sprints de endurecimiento, este objetivo esta muy avanzado; el gap principal pendiente sigue siendo cerrar VIP real o mantenerlo explicitamente fuera de alcance del MVP estabilizado.
 
 ### Proximo horizonte
 
-Profundizar automatizacion comercial y operacional: mejor integracion con Shopify, mayor trazabilidad de pedidos, cobranza y experiencia VIP realmente conectada con canales externos.
+Profundizar automatizacion comercial y operacional: mejor integracion con Shopify, mayor trazabilidad de pedidos y una experiencia VIP realmente conectada con canales externos. Las cobranzas y la trazabilidad base ya tienen una primera capa operativa incorporada, por lo que el siguiente salto pasa a ser mas funcional que correctivo.
 
 ### Horizonte posterior
 

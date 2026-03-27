@@ -336,19 +336,21 @@ Entidades principales observadas:
 - amplio set de modulos ERP visibles;
 - esquema Supabase con cobertura fuerte del dominio;
 - soporte de operaciones clave del negocio en interfaz;
-- baseline automatizado de validaciones sobre helpers sensibles del dominio.
+- baseline automatizado de validaciones sobre helpers sensibles del dominio;
+- endurecimiento incremental de compras, inventario, produccion, ventas, preparacion/despacho y salud financiera mediante slices pequenos y probados;
+- accion minima de cobranzas operativas sobre `accounts_receivable` desde `FinancialHealthModule`.
 
 ### Parcial o no consolidado
 
-- varios modulos muestran intencion funcional mayor a su robustez tecnica actual;
-- ciertos flujos dependen de supuestos no siempre garantizados por schema/tipos;
-- algunas integraciones y automatizaciones no completan el ciclo real de negocio.
+- varios modulos ya fueron endurecidos, pero todavia existen flujos que pueden requerir una segunda capa de consolidacion si cambian sus reglas;
+- ciertas integraciones y automatizaciones aun no completan el ciclo real de negocio;
+- la experiencia VIP sigue explicitamente parcial mientras no exista proveedor real de correo.
 
 ### Ejemplos concretos de gaps
 
 - `supabase/functions/send-vip-email/index.ts` responde en modo simulacion y no integra un proveedor real de correo.
-- `src/components/ProductionModule.tsx` y `src/components/ProductionSheetModule.tsx` siguen requiriendo vigilancia para no reabrir divergencias de modelo.
-- La cobertura automatizada todavia prioriza helpers puros; inventario y produccion necesitan crecimiento incremental si cambian los flujos.
+- `src/components/ProductionModule.tsx` y `src/components/ProductionSheetModule.tsx` siguen requiriendo vigilancia para no reabrir divergencias de modelo, aunque el flujo base quedo mucho mas alineado tras los helpers compartidos recientes.
+- La cobertura automatizada sigue priorizando helpers puros; si cambian flujos de inventario o produccion, el crecimiento de coverage debe acompanarlos.
 - Historicamente existio duplicidad de cliente Supabase frente a `src/lib/supabase.ts`; ese punto ya fue resuelto y debe mantenerse asi.
 
 ## 12. Riesgos
@@ -388,11 +390,15 @@ Entidades principales observadas:
 - asegurar que dashboards usen entidades/campos reales;
 - documentar claramente limites funcionales actuales.
 
+Estado actual: este bloque esta muy avanzado. Los flujos base y los dashboards principales quedaron endurecidos de forma incremental; el principal pendiente explicito para declarar el MVP estabilizado como completamente cerrado sigue siendo VIP real o su exclusion formal del alcance.
+
 ### Trimestre 1
 
 - completar envio real de emails VIP y trazabilidad asociada;
 - consolidar cuentas por cobrar/pagar con mejor estado operativo;
 - reforzar trazabilidad entre orden, produccion y despacho.
+
+Estado actual de estas lineas: cuentas por pagar ya cuentan con flujo helper-driven de pago; cuentas por cobrar ya tienen accion minima de cobro; y produccion/despacho exponen backlog y cola operativa con helpers compartidos. Lo pendiente aqui ya es profundizacion funcional, no solo hardening correctivo.
 
 ### Trimestre 2
 
@@ -407,5 +413,5 @@ Entidades principales observadas:
 - el baseline de validaciones automatizadas sigue pasando en CI/local;
 - los flujos de inventario, produccion, compras, ventas y fiscalidad reflejan entidades reales del schema;
 - la documentacion de producto coincide con el estado del codigo;
-- VIP deja de ser una simulacion y pasa a flujo confiable, mientras Shopify conserva su endurecimiento actual;
+- VIP deja de ser una simulacion y pasa a flujo confiable, o bien queda explicitamente fuera del MVP estabilizado mientras Shopify conserva su endurecimiento actual;
 - cada rol puede operar sus tareas principales sin ambiguedades de permisos o datos.

@@ -8,7 +8,16 @@
 - Roles operativos vigentes: `admin`, `operario`, `vendedor`.
 - Integracion Shopify endurecida con validacion de webhook y sync de stock autenticado.
 - Flujo VIP documentado como simulacion explicita; no envia correos reales desde esta accion.
-- Red minima de validaciones automatizadas disponible con `vitest` para helpers fiscales, auth recovery, permisos por rol y payloads Shopify.
+- Red de validaciones automatizadas extendida con `vitest` sobre helpers fiscales, auth recovery, permisos por rol, payloads Shopify y slices operativos de compras, inventario, produccion, ventas, despacho y finanzas.
+- `FinancialHealthModule` ya permite una accion minima para marcar cobros en `accounts_receivable`.
+- `OrderPreparationModule` y `ProductionSheetModule` ya exponen cola operativa y backlog de produccion con helpers compartidos.
+
+## Estado funcional del MVP
+
+- El backlog tecnico base (`P0`, `P1`, `P2-01`, `P2-02`, `P2-03`) se considera cerrado en el repo.
+- El MVP esta muy cerca de un estado "estabilizado": los flujos base de compras, inventario, produccion, ventas, preparacion/despacho y salud financiera ya fueron endurecidos incrementalmente.
+- El principal gap funcional explicitamente pendiente sigue siendo VIP email real; hoy se mantiene como simulacion documentada.
+- La documentacion del producto debe seguir distinguiendo entre lo ya operativo, lo operativo pero en consolidacion y lo aun parcial o pendiente.
 
 ## Verificacion recomendada
 
