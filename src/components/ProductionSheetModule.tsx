@@ -3,6 +3,7 @@ import { Beaker, CheckCircle, XCircle, AlertTriangle, Droplet, FileText } from '
 import {
   buildProductionOrderInsert,
   buildProductionCompletionPlan,
+  getProductionOrderBacklogSummary,
   ProductionValidationResult,
   validateProductionInput,
 } from '../lib/productionHelpers';
@@ -16,6 +17,7 @@ export default function ProductionSheetModule() {
   const [selectedProduct, setSelectedProduct] = useState('');
   const [targetUnits, setTargetUnits] = useState(24);
   const [validation, setValidation] = useState<ProductionValidationResult | null>(null);
+  const backlogSummary = getProductionOrderBacklogSummary(orders);
 
   useEffect(() => {
     loadData();
@@ -368,6 +370,14 @@ export default function ProductionSheetModule() {
         <div className="px-6 py-4 border-b border-slate-700/50 bg-gradient-to-r from-purple-900/30 to-indigo-900/30">
           <h3 className="text-lg font-bold text-white">Órdenes de Producción</h3>
           <p className="text-sm text-purple-400 mt-1">Historial y seguimiento de lotes</p>
+        </div>
+
+        <div className="px-6 py-4 bg-slate-900/30 border-b border-slate-700/50">
+          <p className="text-sm text-slate-300">
+            Backlog actual de produccion: <span className="font-bold text-cyan-300">{backlogSummary.pendingUnits} unidades</span> en
+            <span className="font-bold text-white"> {backlogSummary.pendingCount} ordenes pendientes</span> y
+            <span className="font-bold text-emerald-300"> {backlogSummary.completedCount} ordenes</span> ya completadas.
+          </p>
         </div>
 
         <div className="overflow-x-auto">

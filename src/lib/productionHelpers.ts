@@ -56,6 +56,12 @@ export interface ProductionOrderInsert {
   started_at: string;
 }
 
+export interface ProductionOrderBacklogSummary {
+  pendingCount: number;
+  completedCount: number;
+  pendingUnits: number;
+}
+
 export const parseFormatToLiters = (format: string): number | null => {
   const normalizedFormat = format.trim().toLowerCase();
   const numericMatch = normalizedFormat.match(/(\d+(?:[.,]\d+)?)/);
@@ -164,6 +170,17 @@ export const buildProductionOrderInsert = (
     validation_passed: true,
     validation_errors: null,
     started_at: startedAt,
+  };
+};
+
+export const getProductionOrderBacklogSummary = (orders: ProductionOrder[]): ProductionOrderBacklogSummary => {
+  const pendingOrders = orders.filter((order) => order.status === 'pending');
+  const completedOrders = orders.filter((order) => order.status === 'completed');
+
+  return {
+    pendingCount: pendingOrders.length,
+    completedCount: completedOrders.length,
+    pendingUnits: pendingOrders.reduce((sum, order) => sum + order.target_units, 0),
   };
 };
 
