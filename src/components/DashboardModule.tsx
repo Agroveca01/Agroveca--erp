@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { TrendingUp, Package, Target, AlertTriangle, TrendingDown, Calculator, Receipt, Truck, CheckCircle, BarChart3, Download } from 'lucide-react';
 import { calculateDashboardProductMetrics, getMonthlyRevenueSummary } from '../lib/dashboardFinancialHelpers';
 import { getDashboardMarginSummary } from '../lib/dashboardModuleHelpers';
+import { getShopifySimulatorSummary } from '../lib/dashboardShopifySimulatorHelpers';
 import { supabase, Product, BusinessConfig, SalesOrder } from '../lib/supabase';
 import { calculateNetFromGross, formatVATPercentage } from '../lib/taxUtils';
 import { generateProductDataSheet } from '../lib/pdfGenerator';
@@ -498,14 +499,16 @@ function SalesSimulator({ products, config, onClose }: SalesSimulatorProps) {
     }).format(amount);
   };
 
-  const selectedProductData = products.find(p => p.product.id === selectedProduct);
-  const totalRevenueGross = selectedProductData ? selectedProductData.basePriceGross * estimatedSales : 0;
-  const totalRevenueNet = selectedProductData ? selectedProductData.basePriceNet * estimatedSales : 0;
-  const totalVATDebit = totalRevenueGross - totalRevenueNet;
-  const totalCosts = selectedProductData ? selectedProductData.realCost * estimatedSales : 0;
-  const grossProfit = totalRevenueNet - totalCosts;
-  const netProfit = grossProfit - adsInvestment;
-  const roi = adsInvestment > 0 ? ((netProfit / adsInvestment) * 100) : 0;
+  const {
+    selectedProductData,
+    totalRevenueGross,
+    totalRevenueNet,
+    totalVATDebit,
+    totalCosts,
+    grossProfit,
+    netProfit,
+    roi,
+  } = getShopifySimulatorSummary(products, selectedProduct, estimatedSales, adsInvestment);
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
