@@ -8,6 +8,7 @@ import {
 } from '../lib/shopifyIntegrationHelpers';
 import { getShopifyStockSyncPayloads } from '../lib/shopifySync';
 import { useAuth } from '../contexts/useAuth';
+import { ShopifyDiscoveryResponse } from '../types/shopify';
 
 interface ShopifyConfig {
   id: string;
@@ -42,19 +43,18 @@ interface ShopifyOrder {
 }
 
 export default function ShopifyIntegrationModule() {
-  // --- Panel Salud Shopify ---
-  const [shopifyDiscovery, setShopifyDiscovery] = useState<{ unmapped: any[] } | null>(null);
+
+  const [shopifyDiscovery, setShopifyDiscovery] = useState<ShopifyDiscoveryResponse | null>(null);
   const [discoveryLoading, setDiscoveryLoading] = useState(false);
   const [discoveryError, setDiscoveryError] = useState<string | null>(null);
 
   useEffect(() => {
     setDiscoveryLoading(true);
     setDiscoveryError(null);
-    fetch('/supabase/functions/shopify-discovery')
-      .then(async (res) => {
-        if (!res.ok) throw new Error('Error al consultar descubrimiento Shopify');
-        const json = await res.json();
-        setShopifyDiscovery(json);
+    supabase.functions.invoke('shopify-discovery')
+      .then(({ data, error }) => {
+        if (error) throw new Error('Error al consultar descubrimiento Shopify: ' + error.message);
+        setShopifyDiscovery(data as ShopifyDiscoveryResponse);
       })
       .catch((err) => {
         setDiscoveryError(err?.message || 'Error desconocido');
@@ -448,7 +448,7 @@ export default function ShopifyIntegrationModule() {
         ) : shopifyDiscovery && shopifyDiscovery.unmapped ? (
           <>
             <div className="mb-4 text-gray-700">
-              Encontrados <b>{shopifyDiscovery.unmapped.length}</b> productos/variantes de Shopify sin vincular.<br/>
+              Encontrados <b>{shopifyDiscovery.unmapped.length}</b> productos/variantes de Shopify sin vincular.<br />
               {shopifyDiscovery.unmapped.length === 0 && (
                 <span className="text-green-600">¡Todo mapeado correctamente!</span>
               )}
@@ -465,10 +465,15 @@ export default function ShopifyIntegrationModule() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
-                    {shopifyDiscovery.unmapped.map((item, idx) => (
+                    {shopifyDiscovery.unmapped.map((item: import('../types/shopify').UnmappedShopifyProduct, idx: number) => (
                       <tr key={item.variant.id + '-' + idx}>
                         <td className="px-3 py-2">{item.shopifyProduct.title}</td>
-                        <td className="px-3 py-2">{item.variant.title ?? '-'}</td>
+                        <td className="px-3 py-2">{(() => {
+                          // Buscar la variante real dentro del producto de Shopify por id
+                          const variant = item.shopifyProduct.variants.find(v => v.id === item.variant.id);
+                          return variant?.title || '-';
+                        })()}
+                        </td>
                         <td className="px-3 py-2">{item.variant.sku}</td>
                         <td className="px-3 py-2">
                           {item.suggestedMatch ? (
