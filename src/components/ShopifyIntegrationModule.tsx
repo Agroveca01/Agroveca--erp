@@ -60,7 +60,9 @@ export default function ShopifyIntegrationModule() {
       return;
     }
 
-    supabase.functions.invoke('shopify-discovery')
+    supabase.functions.invoke('shopify-discovery', {
+      method: 'GET',
+    })
       .then(({ data, error }) => {
         if (error) {
           if (
