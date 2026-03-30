@@ -48,19 +48,38 @@ export default function ShopifyIntegrationModule() {
   const [discoveryLoading, setDiscoveryLoading] = useState(false);
   const [discoveryError, setDiscoveryError] = useState<string | null>(null);
 
+  const { session } = useAuth();
+
   useEffect(() => {
     setDiscoveryLoading(true);
     setDiscoveryError(null);
+
+    if (!session) {
+      setDiscoveryError('Debes iniciar sesión para consultar salud de integración Shopify');
+      setDiscoveryLoading(false);
+      return;
+    }
+
     supabase.functions.invoke('shopify-discovery')
       .then(({ data, error }) => {
-        if (error) throw new Error('Error al consultar descubrimiento Shopify: ' + error.message);
+        if (error) {
+          if (
+            error.status === 401 ||
+            /jwt/i.test(error.message) ||
+            /No autorizado/i.test(error.message) ||
+            /JWT inválido|expired|unauthorized|401/i.test(error.message)
+          ) {
+            throw new Error('Debes iniciar sesión para consultar salud de integración Shopify');
+          }
+          throw new Error('Error al consultar descubrimiento Shopify: ' + error.message);
+        }
         setShopifyDiscovery(data as ShopifyDiscoveryResponse);
       })
       .catch((err) => {
         setDiscoveryError(err?.message || 'Error desconocido');
       })
       .finally(() => setDiscoveryLoading(false));
-  }, []);
+  }, [session]);
 
   const { isAdmin } = useAuth();
   const [config, setConfig] = useState<ShopifyConfig | null>(null);

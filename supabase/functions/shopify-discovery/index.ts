@@ -24,9 +24,32 @@ Deno.serve(async (req: Request) => {
     );
   }
   try {
+    // --- JWT Extraction and Validation ---
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return new Response(
+        JSON.stringify({ error: "No autorizado: token faltante" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    const jwt = authHeader.substring("Bearer ".length);
+
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const pubKey = Deno.env.get("VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY")!;
+    const supabase = createClient(supabaseUrl, pubKey, {
+      global: {
+        headers: { Authorization: `Bearer ${jwt}` },
+      },
+    });
+
+    // Validate the JWT with Supabase
+    const { data: user, error: userError } = await supabase.auth.getUser(jwt);
+    if (userError || !user) {
+      return new Response(
+        JSON.stringify({ error: "JWT inválido o expirado" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     // Obtener todos los productos ERP
     const { data: erpProducts, error: erpError } = await supabase
