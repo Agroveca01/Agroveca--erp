@@ -49,6 +49,7 @@ export default function ShopifyIntegrationModule() {
   const [discoveryError, setDiscoveryError] = useState<string | null>(null);
 
   const { session } = useAuth();
+  console.log('Session', session);
 
   useEffect(() => {
     setDiscoveryLoading(true);
@@ -59,6 +60,7 @@ export default function ShopifyIntegrationModule() {
       setDiscoveryLoading(false);
       return;
     }
+
 
     supabase.functions.invoke('shopify-discovery', {
       method: 'GET',
