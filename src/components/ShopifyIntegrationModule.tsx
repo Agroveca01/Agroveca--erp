@@ -49,7 +49,7 @@ export default function ShopifyIntegrationModule() {
   const [discoveryError, setDiscoveryError] = useState<string | null>(null);
 
   const { session } = useAuth();
-  console.log('Session', session);
+
 
   useEffect(() => {
     setDiscoveryLoading(true);

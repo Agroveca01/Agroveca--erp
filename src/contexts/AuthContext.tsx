@@ -10,6 +10,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // ⛑ SECURITY: Sync Supabase Edge Functions JWT globally here.
+  // Do NOT set supabase.functions.setAuth() in any module or feature—handle it only here.
+  // This ensures all Edge Function calls have the current session JWT automatically.
+  // See Supabase docs (2024): https://supabase.com/docs/guides/functions/authentication#authenticating-the-function-call
+  useEffect(() => {
+    if (session?.access_token) {
+      supabase.functions.setAuth(session.access_token);
+    } else {
+      supabase.functions.setAuth(''); // Limpia el token en logout (empty string is safe)
+    }
+  }, [session]);
+
   const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
 
   useEffect(() => {
