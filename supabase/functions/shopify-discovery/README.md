@@ -1,6 +1,8 @@
 # API: Descubrimiento de Productos Shopify No Mapeados en ERP
 
-Esta función expone un endpoint GET para listar productos (y variantes) de Shopify que aún no están vinculados (mapeados) en el ERP, junto con sugerencias automáticas de match según el SKU/product_id.
+Esta función expone un endpoint `GET` para listar productos y variantes de Shopify que aún no están vinculados en el ERP, junto con sugerencias automáticas de match según `SKU` y `product_id`.
+
+La implementación actual usa la API GraphQL Admin de Shopify con autenticación por credenciales de cliente y pagina automáticamente todo el catálogo.
 
 **Ruta:**
 ```
@@ -13,9 +15,20 @@ Esta función expone un endpoint GET para listar productos (y variantes) de Shop
 
 ```http
 GET /supabase/functions/shopify-discovery
+Authorization: Bearer <supabase-jwt>
 ```
 
-No requiere parámetros; autenticación y control de acceso pueden añadirse según se necesite.
+Requiere un JWT válido de Supabase en el header `Authorization`.
+
+Variables de entorno requeridas en la función:
+
+```env
+SUPABASE_URL=
+VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY=
+SHOPIFY_SHOP=
+SHOPIFY_CLIENT_ID=
+SHOPIFY_CLIENT_SECRET=
+```
 
 ---
 
@@ -47,17 +60,35 @@ No requiere parámetros; autenticación y control de acceso pueden añadirse seg
 }
 ```
 
-Si hay coincidencia entre la SKU del producto en Shopify y el product_id del ERP, `suggestedMatch` contendrá el objeto Product correspondiente desde el ERP.
+Si hay coincidencia entre la SKU del producto en Shopify y el `product_id` del ERP, `suggestedMatch` contendrá el objeto `Product` correspondiente.
+
+## Errores esperados
+
+- `401`: JWT faltante, inválido o expirado.
+- `500`: falta configuración local o no se pudieron obtener productos ERP.
+- `502`: Shopify rechazó la autenticación o devolvió un error en GraphQL.
 
 ---
 
+## Prueba local recomendada
+
+1. Configura los secrets de la función con `supabase secrets set` o desde el dashboard de Supabase.
+2. Levanta las funciones localmente con `supabase functions serve`.
+3. Obtén un JWT válido iniciando sesión en la app.
+4. Invoca la función:
+
+```bash
+curl -i \
+  -H "Authorization: Bearer <supabase-jwt>" \
+  http://127.0.0.1:54321/functions/v1/shopify-discovery
+```
+
 ## Uso y siguientes pasos
-- El endpoint puede ser consumido para poblar el nuevo panel de salud de integración, dar alertas al usuario, o guiar el proceso de mapeo automático.
-- Cuando se integre la API real de Shopify, sólo debe reemplazarse el stub `fetchShopifyProductsStub` sin alterar el contrato de respuesta.
+- El endpoint puede poblar el panel de salud de integración, alertar al usuario o guiar el mapeo manual.
+- El contrato de respuesta exitoso se mantiene estable aunque falle la consulta a Shopify.
 
 ---
 
 **TODO:**
-- Añadir autenticación/jwt para producción.
-- Enriquecer la lógica de sugerencia de matches considerando otros campos (nombre, formato).
-- Extender el modelo Product en el ERP para soportar references shopify_product_id/shopify_variant_id.
+- Enriquecer la lógica de sugerencia de matches considerando otros campos como nombre o formato.
+- Extender el modelo `Product` en el ERP para soportar `shopify_product_id` y `shopify_variant_id` persistidos.

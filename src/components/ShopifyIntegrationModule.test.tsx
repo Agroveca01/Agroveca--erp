@@ -1,11 +1,49 @@
+// @vitest-environment jsdom
+
 import { render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import React from 'react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import ShopifyIntegrationModule from './ShopifyIntegrationModule';
 
-// Helpers to mock fetch and user auth context
-global.fetch = jest.fn();
-jest.mock('../contexts/useAuth', () => ({ useAuth: () => ({ isAdmin: true }) }));
+const {
+  mockInvoke,
+  mockMaybeSingle,
+  mockFrom,
+  mockAuthState,
+} = vi.hoisted(() => ({
+  mockInvoke: vi.fn(),
+  mockMaybeSingle: vi.fn(),
+  mockFrom: vi.fn(),
+  mockAuthState: {
+    isAdmin: true,
+    session: { access_token: 'test-jwt' },
+  },
+}));
+
+vi.mock('../contexts/useAuth', () => ({
+  useAuth: () => mockAuthState,
+}));
+
+vi.mock('../lib/supabase', () => ({
+  supabase: {
+    functions: {
+      invoke: mockInvoke,
+    },
+    from: mockFrom,
+  },
+}));
+
+function createQueryBuilder(result: { data: unknown; error: unknown }) {
+  return {
+    maybeSingle: vi.fn().mockResolvedValue(result),
+    order: vi.fn().mockReturnThis(),
+    limit: vi.fn().mockResolvedValue(result),
+    not: vi.fn().mockResolvedValue(result),
+    update: vi.fn().mockReturnThis(),
+    insert: vi.fn().mockResolvedValue(result),
+    eq: vi.fn().mockResolvedValue(result),
+  };
+}
 
 const mockUnmappedResponse = {
   unmapped: [
@@ -35,29 +73,44 @@ const mockUnmappedResponse = {
 
 describe('ShopifyIntegrationModule – Panel de Salud Shopify', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
+    mockInvoke.mockResolvedValue({ data: { unmapped: [] }, error: null });
+    mockMaybeSingle.mockResolvedValue({ data: null, error: null });
+    mockFrom.mockImplementation((table: string) => ({
+      select: vi.fn().mockReturnValue(
+        table === 'shopify_config'
+          ? { maybeSingle: mockMaybeSingle }
+          : createQueryBuilder({ data: [], error: null })
+      ),
+      update: vi.fn().mockReturnValue(createQueryBuilder({ data: null, error: null })),
+      insert: vi.fn().mockResolvedValue({ data: null, error: null }),
+    }));
   });
 
   it('muestra loader mientras carga los productos Shopify no mapeados', async () => {
-    (global.fetch as jest.Mock).mockReturnValueOnce(new Promise(() => {})); // nunca resuelve
+    mockInvoke.mockImplementationOnce(() => new Promise(() => {}));
     render(<ShopifyIntegrationModule />);
-    expect(screen.getByText(/Cargando productos desde Shopify/i)).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText(/Cargando productos desde Shopify/i)).toBeInTheDocument();
+    });
   });
 
   it('muestra mensaje de error si falla el fetch', async () => {
-    (global.fetch as jest.Mock).mockRejectedValueOnce(new Error('falló!'));
+    mockInvoke.mockResolvedValueOnce({ data: null, error: { message: 'falló!', status: 500 } });
     render(<ShopifyIntegrationModule />);
-    await waitFor(() => expect(screen.getByText(/Error: falló!/i)).toBeInTheDocument());
+    await waitFor(() => {
+      expect(screen.getByText(/Error: Error al consultar descubrimiento Shopify: falló!/i)).toBeInTheDocument();
+    });
   });
 
   it('muestra tabla con productos y variantes no mapeados', async () => {
-    (global.fetch as jest.Mock).mockResolvedValueOnce({
-      ok: true,
-      json: async () => mockUnmappedResponse,
+    mockInvoke.mockResolvedValueOnce({
+      data: mockUnmappedResponse,
+      error: null,
     });
     render(<ShopifyIntegrationModule />);
     await waitFor(() => {
-      expect(screen.getByText(/Productos\/variantes de Shopify sin vincular/i)).toBeInTheDocument();
+      expect(screen.getByText(/Salud Integración Shopify: Productos\/variantes sin mapear/i)).toBeInTheDocument();
       expect(screen.getByText('Producto A')).toBeInTheDocument();
       expect(screen.getByText('Rojo')).toBeInTheDocument();
       expect(screen.getByText('A-ROJO')).toBeInTheDocument();
@@ -70,9 +123,9 @@ describe('ShopifyIntegrationModule – Panel de Salud Shopify', () => {
   });
 
   it('muestra mensaje de todo mapeado correctamente si el array está vacío', async () => {
-    (global.fetch as jest.Mock).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ unmapped: [] }),
+    mockInvoke.mockResolvedValueOnce({
+      data: { unmapped: [] },
+      error: null,
     });
     render(<ShopifyIntegrationModule />);
     await waitFor(() => {

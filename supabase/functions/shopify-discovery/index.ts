@@ -1,5 +1,21 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { fetchShopifyProductsStub, findUnmappedShopifyProducts } from "./lib/shopifyProductDiscovery.ts";
+import { fetchShopifyProducts, findUnmappedShopifyProducts } from "./lib/shopifyProductDiscovery.ts";
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : "Error desconocido";
+}
+
+function getErrorStatus(message: string): number {
+  if (/faltan variables|falta configuracion de entorno/i.test(message)) {
+    return 500;
+  }
+
+  if (/token shopify|shopify api error|shopify graphql errors/i.test(message)) {
+    return 502;
+  }
+
+  return 500;
+}
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -62,8 +78,7 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Stub: productos de Shopify (ejemplo; cambiar a API real en integración futura)
-    const shopifyProducts = await fetchShopifyProductsStub();
+    const shopifyProducts = await fetchShopifyProducts();
 
     // Detectar productos no mapeados y sugerencias
     const unmapped = findUnmappedShopifyProducts(shopifyProducts, erpProducts);
@@ -73,8 +88,10 @@ Deno.serve(async (req: Request) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
+    const message = getErrorMessage(error);
+
+    return new Response(JSON.stringify({ error: message }), {
+      status: getErrorStatus(message),
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
