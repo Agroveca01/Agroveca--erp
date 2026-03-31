@@ -59,6 +59,18 @@ VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY=<PUBLISHABLE-KEY-PROD>
   - **Production:** variables del proyecto Supabase de producción
   - **Preview:** variables del proyecto Supabase de desarrollo
 
+### Variables adicionales para funciones Shopify
+
+Las funciones edge relacionadas con Shopify requieren secrets del lado servidor. En particular, `shopify-discovery` usa:
+
+```env
+SHOPIFY_SHOP=<nombre-de-tienda-sin-myshopify-com>
+SHOPIFY_CLIENT_ID=<client-id-de-shopify>
+SHOPIFY_CLIENT_SECRET=<client-secret-de-shopify>
+```
+
+Estas variables no deben exponerse al frontend ni vivir en archivos `VITE_*`.
+
 ### Seguridad
 - **Jamás** subas archivos .env ni claves privadas al repositorio.
 - Todas las variables sensibles deben ir solo en archivos ignorados o configuradas desde el dashboard de Vercel.
@@ -78,6 +90,14 @@ VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY=<PUBLISHABLE-KEY-PROD>
 3. Refresca el frontend: el nuevo dato debe aparecer. Si miras el proyecto Prod (panel Supabase Prod) verás que no se modificó.
 4. Haz lo mismo en producción para verificar el aislamiento.
 5. Si ves datos cruzados, revisa tus variables, despliegue y configuración de Vercel.
+
+## Verificación específica de Shopify discovery
+
+1. Configura los secrets de Supabase Functions para `SHOPIFY_SHOP`, `SHOPIFY_CLIENT_ID` y `SHOPIFY_CLIENT_SECRET`.
+2. Inicia sesión en la app para obtener un JWT válido.
+3. Ejecuta localmente `supabase functions serve`.
+4. Invoca `GET /functions/v1/shopify-discovery` con el header `Authorization: Bearer <jwt>`.
+5. Espera una respuesta con `unmapped`; si Shopify falla, el endpoint responderá con error `502`.
 
 ## Checklist para el equipo
 
