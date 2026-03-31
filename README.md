@@ -64,6 +64,7 @@ VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY=<PUBLISHABLE-KEY-PROD>
 Las funciones edge relacionadas con Shopify requieren secrets del lado servidor. En particular, `shopify-discovery` usa:
 
 ```env
+SUPABASE_SERVICE_ROLE_KEY=<service-role-key-de-supabase>
 SHOPIFY_SHOP=<nombre-de-tienda-sin-myshopify-com>
 SHOPIFY_CLIENT_ID=<client-id-de-shopify>
 SHOPIFY_CLIENT_SECRET=<client-secret-de-shopify>

@@ -5,6 +5,16 @@ function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : "Error desconocido";
 }
 
+function getRequiredEnv(name: string): string {
+  const value = Deno.env.get(name);
+
+  if (!value) {
+    throw new Error(`Falta variable de entorno requerida: ${name}`);
+  }
+
+  return value;
+}
+
 function getErrorStatus(message: string): number {
   if (/faltan variables|falta configuracion de entorno/i.test(message)) {
     return 500;
@@ -50,9 +60,9 @@ Deno.serve(async (req: Request) => {
     }
     const jwt = authHeader.substring("Bearer ".length);
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const pubKey = Deno.env.get("VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY")!;
-    const supabase = createClient(supabaseUrl, pubKey, {
+    const supabaseUrl = getRequiredEnv("SUPABASE_URL");
+    const supabaseKey = getRequiredEnv("SUPABASE_SERVICE_ROLE_KEY");
+    const supabase = createClient(supabaseUrl, supabaseKey, {
       global: {
         headers: { Authorization: `Bearer ${jwt}` },
       },
