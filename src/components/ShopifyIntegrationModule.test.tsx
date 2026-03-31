@@ -5,7 +5,11 @@ import '@testing-library/jest-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import ShopifyIntegrationModule from './ShopifyIntegrationModule';
 
+const mockAlert = vi.fn();
 const clipboardWriteText = vi.fn().mockResolvedValue(undefined);
+const expectedWebhookAddress = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/shopify-webhook`;
+
+vi.stubGlobal('alert', mockAlert);
 
 Object.defineProperty(globalThis.navigator, 'clipboard', {
   value: {
@@ -92,13 +96,14 @@ const mockUnmappedResponse = {
 describe('ShopifyIntegrationModule – Panel de Salud Shopify', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockAlert.mockReset();
     clipboardWriteText.mockResolvedValue(undefined);
     mockInvoke.mockImplementation((functionName?: string) => {
       if (functionName === 'shopify-locations') {
         return Promise.resolve({ data: { locations: [] }, error: null });
       }
 
-      if (functionName === 'shopify-webhooks') {
+      if (functionName === 'shopify-webhook-status') {
         return Promise.resolve({ data: { webhooks: [] }, error: null });
       }
 
@@ -243,7 +248,7 @@ describe('ShopifyIntegrationModule – Panel de Salud Shopify', () => {
         });
       }
 
-      if (functionName === 'shopify-webhooks') {
+      if (functionName === 'shopify-webhook-status') {
         return Promise.resolve({ data: { webhooks: [] }, error: null });
       }
 
@@ -281,14 +286,14 @@ describe('ShopifyIntegrationModule – Panel de Salud Shopify', () => {
 
   it('muestra el estado del webhook orders/create cuando existe', async () => {
     mockInvoke.mockImplementation((functionName?: string) => {
-      if (functionName === 'shopify-webhooks') {
+      if (functionName === 'shopify-webhook-status') {
         return Promise.resolve({
           data: {
             webhooks: [
               {
                 id: '1',
                 topic: 'orders/create',
-                address: 'http://localhost:3000/functions/v1/shopify-webhook',
+                address: expectedWebhookAddress,
                 api_version: '2026-01',
               },
             ],
@@ -307,5 +312,86 @@ describe('ShopifyIntegrationModule – Panel de Salud Shopify', () => {
     render(<ShopifyIntegrationModule />);
 
     expect(await screen.findByText(/Webhook orders\/create configurado correctamente/i)).toBeInTheDocument();
+  });
+
+  it('permite registrar el webhook orders/create desde el panel', async () => {
+    mockInvoke.mockImplementation((functionName?: string) => {
+      if (functionName === 'shopify-webhook-status') {
+        return Promise.resolve({ data: { webhooks: [] }, error: null });
+      }
+
+      if (functionName === 'shopify-webhook-sync') {
+        return Promise.resolve({ data: { action: 'created' }, error: null });
+      }
+
+      if (functionName === 'shopify-locations') {
+        return Promise.resolve({ data: { locations: [] }, error: null });
+      }
+
+      return Promise.resolve({ data: { unmapped: [] }, error: null });
+    });
+
+    render(<ShopifyIntegrationModule />);
+
+    const button = await screen.findByRole('button', { name: 'Registrar webhook' });
+    fireEvent.click(button);
+
+    await waitFor(() => {
+      expect(mockInvoke).toHaveBeenCalledWith('shopify-webhook-sync', {
+        method: 'POST',
+        body: {
+          expected_address: expectedWebhookAddress,
+        },
+      });
+      expect(mockAlert).toHaveBeenCalledWith('Webhook orders/create creado correctamente');
+    });
+
+    expect(mockInvoke).toHaveBeenCalledWith('shopify-webhook-status', { method: 'GET' });
+  });
+
+  it('permite reparar el webhook cuando apunta a otra URL', async () => {
+    mockInvoke.mockImplementation((functionName?: string) => {
+      if (functionName === 'shopify-webhook-status') {
+        return Promise.resolve({
+          data: {
+            webhooks: [
+              {
+                id: '1',
+                topic: 'orders/create',
+                address: 'https://wrong.example/functions/v1/shopify-webhook',
+                api_version: '2026-01',
+              },
+            ],
+          },
+          error: null,
+        });
+      }
+
+      if (functionName === 'shopify-webhook-sync') {
+        return Promise.resolve({ data: { action: 'updated' }, error: null });
+      }
+
+      if (functionName === 'shopify-locations') {
+        return Promise.resolve({ data: { locations: [] }, error: null });
+      }
+
+      return Promise.resolve({ data: { unmapped: [] }, error: null });
+    });
+
+    render(<ShopifyIntegrationModule />);
+
+    expect(await screen.findByText(/Webhook orders\/create detectado, pero apunta a otra URL/i)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Reparar webhook' }));
+
+    await waitFor(() => {
+      expect(mockInvoke).toHaveBeenCalledWith('shopify-webhook-sync', {
+        method: 'POST',
+        body: {
+          expected_address: expectedWebhookAddress,
+        },
+      });
+      expect(mockAlert).toHaveBeenCalledWith('Webhook orders/create actualizado correctamente');
+    });
   });
 });

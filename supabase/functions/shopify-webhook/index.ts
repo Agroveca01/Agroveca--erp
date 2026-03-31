@@ -40,6 +40,12 @@ function getRequiredEnv(name: string): string {
   return value;
 }
 
+interface ActiveShopifyConfig {
+  shop_domain: string | null;
+  commission_percentage: number | null;
+  payment_gateway_fee: number | null;
+}
+
 function normalizeShopDomain(value: string): string {
   return value.replace(/^https?:\/\//i, "").replace(/\/$/, "").trim().toLowerCase();
 }
@@ -86,6 +92,126 @@ async function verifyShopifyWebhook(
   return timingSafeEqual(expectedHmac, providedHmac);
 }
 
+function scheduleBackgroundTask(task: Promise<unknown>): boolean {
+  const runtime = globalThis as typeof globalThis & {
+    EdgeRuntime?: {
+      waitUntil?: (promise: Promise<unknown>) => void;
+    };
+  };
+
+  if (!runtime.EdgeRuntime?.waitUntil) {
+    return false;
+  }
+
+  runtime.EdgeRuntime.waitUntil(task);
+  return true;
+}
+
+async function processOrdersCreateWebhook(
+  supabase: ReturnType<typeof createClient>,
+  orderData: ShopifyOrder,
+  activeConfig: ActiveShopifyConfig,
+) {
+  let customerId = null;
+
+  if (orderData.customer && orderData.customer.email) {
+    const { data: mapping } = await supabase
+      .from("shopify_customer_mapping")
+      .select("customer_id")
+      .eq("shopify_customer_id", orderData.customer.id.toString())
+      .maybeSingle();
+
+    if (mapping) {
+      customerId = mapping.customer_id;
+    } else {
+      const { data: existingCustomer } = await supabase
+        .from("customers")
+        .select("id")
+        .eq("email", orderData.customer.email)
+        .maybeSingle();
+
+      if (existingCustomer) {
+        customerId = existingCustomer.id;
+      } else {
+        const { data: newCustomer, error: customerError } = await supabase
+          .from("customers")
+          .insert({
+            name: `${orderData.customer.first_name} ${orderData.customer.last_name}`.trim(),
+            email: orderData.customer.email,
+            phone: orderData.customer.phone || null,
+            loyalty_points: 0,
+          })
+          .select()
+          .single();
+
+        if (!customerError && newCustomer) {
+          customerId = newCustomer.id;
+        }
+      }
+
+      if (customerId) {
+        await supabase.from("shopify_customer_mapping").insert({
+          shopify_customer_id: orderData.customer.id.toString(),
+          customer_id: customerId,
+          email: orderData.customer.email,
+        });
+      }
+    }
+  }
+
+  const totalAmount = parseFloat(orderData.total_price);
+  const { data: commission } = await supabase.rpc(
+    "calculate_shopify_commission",
+    {
+      total_amount: totalAmount,
+      commission_pct: activeConfig.commission_percentage || 0,
+      gateway_pct: activeConfig.payment_gateway_fee || 0,
+    }
+  );
+
+  const commissionAmount = commission?.[0]?.commission_amount || 0;
+  const netAmount = commission?.[0]?.net_amount || totalAmount;
+
+  const { error: orderError } = await supabase
+    .from("shopify_orders")
+    .upsert({
+      shopify_order_id: orderData.id.toString(),
+      order_number: orderData.order_number.toString(),
+      customer_id: customerId,
+      total_amount: totalAmount,
+      commission_amount: commissionAmount,
+      net_amount: netAmount,
+      order_data: orderData,
+    }, {
+      onConflict: "shopify_order_id",
+      ignoreDuplicates: false,
+    });
+
+  if (orderError) {
+    throw new Error(`Failed to save order: ${orderError.message}`);
+  }
+
+  if (customerId) {
+    const loyaltyPoints = Math.floor(totalAmount / 1000);
+    if (loyaltyPoints > 0) {
+      await supabase.rpc("increment", {
+        table_name: "customers",
+        row_id: customerId,
+        column_name: "loyalty_points",
+        amount: loyaltyPoints,
+      }).catch(() => {
+        console.log("Loyalty points update skipped");
+      });
+    }
+  }
+
+  return {
+    order_id: orderData.id,
+    customer_id: customerId,
+    net_amount: netAmount,
+  };
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, {
@@ -129,7 +255,7 @@ Deno.serve(async (req: Request) => {
 
     const { data: config } = await supabase
       .from("shopify_config")
-      .select("shop_domain, is_active")
+      .select("shop_domain, commission_percentage, payment_gateway_fee")
       .eq("is_active", true)
       .maybeSingle();
 
@@ -175,128 +301,35 @@ Deno.serve(async (req: Request) => {
     const orderData: ShopifyOrder = JSON.parse(rawBody);
 
     if (topic === "orders/create") {
-      const { data: activeConfig } = await supabase
-        .from("shopify_config")
-        .select("*")
-        .eq("is_active", true)
-        .maybeSingle();
+      const processingTask = processOrdersCreateWebhook(supabase, orderData, config);
 
-      if (!activeConfig) {
+      if (scheduleBackgroundTask(processingTask.catch((error) => {
+        console.error("Error processing orders/create webhook:", error);
+      }))) {
         return new Response(
-          JSON.stringify({ error: "Shopify not configured" }),
+          JSON.stringify({
+            success: true,
+            accepted: true,
+            topic,
+            order_id: orderData.id,
+          }),
           {
-            status: 400,
+            status: 200,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           }
         );
       }
 
-      let customerId = null;
-
-      if (orderData.customer && orderData.customer.email) {
-        const { data: mapping } = await supabase
-          .from("shopify_customer_mapping")
-          .select("customer_id")
-          .eq("shopify_customer_id", orderData.customer.id.toString())
-          .maybeSingle();
-
-        if (mapping) {
-          customerId = mapping.customer_id;
-        } else {
-          const { data: existingCustomer } = await supabase
-            .from("customers")
-            .select("id")
-            .eq("email", orderData.customer.email)
-            .maybeSingle();
-
-          if (existingCustomer) {
-            customerId = existingCustomer.id;
-          } else {
-            const { data: newCustomer, error: customerError } = await supabase
-              .from("customers")
-              .insert({
-                name: `${orderData.customer.first_name} ${orderData.customer.last_name}`.trim(),
-                email: orderData.customer.email,
-                phone: orderData.customer.phone || null,
-                loyalty_points: 0,
-              })
-              .select()
-              .single();
-
-            if (!customerError && newCustomer) {
-              customerId = newCustomer.id;
-            }
-          }
-
-          if (customerId) {
-            await supabase.from("shopify_customer_mapping").insert({
-              shopify_customer_id: orderData.customer.id.toString(),
-              customer_id: customerId,
-              email: orderData.customer.email,
-            });
-          }
-        }
-      }
-
-      const totalAmount = parseFloat(orderData.total_price);
-      const { data: commission } = await supabase.rpc(
-        "calculate_shopify_commission",
-        {
-          total_amount: totalAmount,
-          commission_pct: activeConfig.commission_percentage,
-          gateway_pct: activeConfig.payment_gateway_fee,
-        }
-      );
-
-      const commissionAmount = commission?.[0]?.commission_amount || 0;
-      const netAmount = commission?.[0]?.net_amount || totalAmount;
-
-      const { error: orderError } = await supabase
-        .from("shopify_orders")
-        .upsert({
-          shopify_order_id: orderData.id.toString(),
-          order_number: orderData.order_number.toString(),
-          customer_id: customerId,
-          total_amount: totalAmount,
-          commission_amount: commissionAmount,
-          net_amount: netAmount,
-          order_data: orderData,
-        }, {
-          onConflict: "shopify_order_id",
-          ignoreDuplicates: false,
-        });
-
-      if (orderError) {
-        console.error("Error inserting order:", orderError);
-        return new Response(
-          JSON.stringify({ error: "Failed to save order" }),
-          {
-            status: 500,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          }
-        );
-      }
-
-      if (customerId) {
-        const loyaltyPoints = Math.floor(totalAmount / 1000);
-        if (loyaltyPoints > 0) {
-          await supabase.rpc("increment", {
-            table_name: "customers",
-            row_id: customerId,
-            column_name: "loyalty_points",
-            amount: loyaltyPoints,
-          }).catch(() => {
-            console.log("Loyalty points update skipped");
-          });
-        }
-      }
+      const result = await processingTask;
 
       return new Response(
         JSON.stringify({
           success: true,
-          order_id: orderData.id,
-          customer_id: customerId,
-          net_amount: netAmount,
+          processed: true,
+          topic,
+          order_id: result?.order_id ?? orderData.id,
+          customer_id: result?.customer_id ?? null,
+          net_amount: result?.net_amount ?? null,
         }),
         {
           status: 200,

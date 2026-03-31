@@ -183,6 +183,7 @@ export default function ShopifyIntegrationModule() {
   const [webhooks, setWebhooks] = useState<ShopifyWebhookSubscription[]>([]);
   const [webhooksLoading, setWebhooksLoading] = useState(false);
   const [webhooksError, setWebhooksError] = useState<string | null>(null);
+  const [webhookSyncing, setWebhookSyncing] = useState(false);
 
   useEffect(() => {
     loadConfig();
@@ -190,7 +191,7 @@ export default function ShopifyIntegrationModule() {
     loadShopifyOrders();
   }, []);
 
-  useEffect(() => {
+  const loadWebhookStatus = async () => {
     if (!session) {
       return;
     }
@@ -198,20 +199,26 @@ export default function ShopifyIntegrationModule() {
     setWebhooksLoading(true);
     setWebhooksError(null);
 
-    supabase.functions.invoke('shopify-webhooks', {
-      method: 'GET',
-    }).then(({ data, error }) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('shopify-webhook-status', {
+        method: 'GET',
+      });
+
       if (error) {
         throw new Error(error.message);
       }
 
       setWebhooks((data?.webhooks || []) as ShopifyWebhookSubscription[]);
-    }).catch((error) => {
+    } catch (error) {
       setWebhooksError(error instanceof Error ? error.message : 'Error desconocido');
       setWebhooks([]);
-    }).finally(() => {
+    } finally {
       setWebhooksLoading(false);
-    });
+    }
+  };
+
+  useEffect(() => {
+    loadWebhookStatus();
   }, [session]);
 
   useEffect(() => {
@@ -308,6 +315,38 @@ export default function ShopifyIntegrationModule() {
     } catch (error) {
       console.error('Error saving config:', error);
       alert('Error al guardar configuración');
+    }
+  };
+
+  const syncWebhookSubscription = async () => {
+    setWebhookSyncing(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('shopify-webhook-sync', {
+        method: 'POST',
+        body: {
+          expected_address: expectedWebhookAddress,
+        },
+      });
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      const action = data?.action || 'updated';
+      alert(
+        action === 'created'
+          ? 'Webhook orders/create creado correctamente'
+          : action === 'updated'
+            ? 'Webhook orders/create actualizado correctamente'
+            : 'Webhook orders/create ya estaba configurado correctamente'
+      );
+
+      await loadWebhookStatus();
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Error al registrar webhook');
+    } finally {
+      setWebhookSyncing(false);
     }
   };
 
@@ -409,10 +448,15 @@ export default function ShopifyIntegrationModule() {
   }
 
   const { totalOrders, totalRevenue, totalCommissions, totalNet } = getShopifyOrdersSummary(shopifyOrders);
-  const expectedWebhookAddress = `${window.location.origin.replace(/\/$/, '')}/functions/v1/shopify-webhook`;
+  const expectedWebhookAddress = `${import.meta.env.VITE_SUPABASE_URL.replace(/\/$/, '')}/functions/v1/shopify-webhook`;
   const ordersCreateWebhook = webhooks.find((webhook) => webhook.topic === 'orders/create');
   const hasOrdersCreateWebhook = Boolean(ordersCreateWebhook);
   const ordersCreateWebhookMatchesAddress = ordersCreateWebhook?.address === expectedWebhookAddress;
+  const webhookActionLabel = hasOrdersCreateWebhook
+    ? ordersCreateWebhookMatchesAddress
+      ? 'Re-registrar webhook'
+      : 'Reparar webhook'
+    : 'Registrar webhook';
 
   return (
     <div className="space-y-6">
@@ -472,7 +516,17 @@ export default function ShopifyIntegrationModule() {
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-lg font-semibold text-gray-900">Estado del Webhook</h3>
-          {webhooksLoading && <span className="text-sm text-gray-500">Cargando...</span>}
+          <div className="flex items-center gap-2">
+            {webhooksLoading && <span className="text-sm text-gray-500">Cargando...</span>}
+            <button
+              type="button"
+              onClick={syncWebhookSubscription}
+              disabled={webhookSyncing || webhooksLoading || !session}
+              className="inline-flex items-center rounded-md bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-emerald-300"
+            >
+              {webhookSyncing ? 'Registrando...' : webhookActionLabel}
+            </button>
+          </div>
         </div>
 
         {webhooksError ? (
@@ -488,12 +542,16 @@ export default function ShopifyIntegrationModule() {
             </p>
             <p className="mt-2 text-sm">Actual: <span className="font-mono break-all">{ordersCreateWebhook?.address}</span></p>
             <p className="mt-1 text-sm">Esperado: <span className="font-mono break-all">{expectedWebhookAddress}</span></p>
+            {!ordersCreateWebhookMatchesAddress && (
+              <p className="mt-2 text-sm">Puedes repararlo desde aqui sin entrar manualmente a Shopify.</p>
+            )}
           </div>
         ) : (
           <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4 text-yellow-900">
             <p className="font-medium">No se encontró suscripción orders/create en Shopify.</p>
             <p className="mt-2 text-sm">Debes crear un webhook que apunte a:</p>
             <p className="mt-1 text-sm font-mono break-all">{expectedWebhookAddress}</p>
+            <p className="mt-2 text-sm">Puedes registrarlo directamente desde este panel.</p>
           </div>
         )}
       </div>
