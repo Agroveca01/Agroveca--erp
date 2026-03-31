@@ -50,6 +50,13 @@ interface ShopifyLocation {
   active: boolean;
 }
 
+interface ShopifyWebhookSubscription {
+  id: string;
+  topic: string;
+  address: string;
+  api_version: string;
+}
+
 export default function ShopifyIntegrationModule() {
 
   const [shopifyDiscovery, setShopifyDiscovery] = useState<ShopifyDiscoveryResponse | null>(null);
@@ -173,12 +180,39 @@ export default function ShopifyIntegrationModule() {
   const [locations, setLocations] = useState<ShopifyLocation[]>([]);
   const [locationsLoading, setLocationsLoading] = useState(false);
   const [locationsError, setLocationsError] = useState<string | null>(null);
+  const [webhooks, setWebhooks] = useState<ShopifyWebhookSubscription[]>([]);
+  const [webhooksLoading, setWebhooksLoading] = useState(false);
+  const [webhooksError, setWebhooksError] = useState<string | null>(null);
 
   useEffect(() => {
     loadConfig();
     loadSyncLogs();
     loadShopifyOrders();
   }, []);
+
+  useEffect(() => {
+    if (!session) {
+      return;
+    }
+
+    setWebhooksLoading(true);
+    setWebhooksError(null);
+
+    supabase.functions.invoke('shopify-webhooks', {
+      method: 'GET',
+    }).then(({ data, error }) => {
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      setWebhooks((data?.webhooks || []) as ShopifyWebhookSubscription[]);
+    }).catch((error) => {
+      setWebhooksError(error instanceof Error ? error.message : 'Error desconocido');
+      setWebhooks([]);
+    }).finally(() => {
+      setWebhooksLoading(false);
+    });
+  }, [session]);
 
   useEffect(() => {
     if (!showConfig || !session) {
@@ -375,6 +409,10 @@ export default function ShopifyIntegrationModule() {
   }
 
   const { totalOrders, totalRevenue, totalCommissions, totalNet } = getShopifyOrdersSummary(shopifyOrders);
+  const expectedWebhookAddress = `${window.location.origin.replace(/\/$/, '')}/functions/v1/shopify-webhook`;
+  const ordersCreateWebhook = webhooks.find((webhook) => webhook.topic === 'orders/create');
+  const hasOrdersCreateWebhook = Boolean(ordersCreateWebhook);
+  const ordersCreateWebhookMatchesAddress = ordersCreateWebhook?.address === expectedWebhookAddress;
 
   return (
     <div className="space-y-6">
@@ -430,6 +468,35 @@ export default function ShopifyIntegrationModule() {
           )}
         </div>
       )}
+
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-lg font-semibold text-gray-900">Estado del Webhook</h3>
+          {webhooksLoading && <span className="text-sm text-gray-500">Cargando...</span>}
+        </div>
+
+        {webhooksError ? (
+          <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700">
+            No se pudo verificar los webhooks de Shopify: {webhooksError}
+          </div>
+        ) : hasOrdersCreateWebhook ? (
+          <div className={`rounded-lg border p-4 ${ordersCreateWebhookMatchesAddress ? 'border-green-200 bg-green-50 text-green-800' : 'border-yellow-200 bg-yellow-50 text-yellow-900'}`}>
+            <p className="font-medium">
+              {ordersCreateWebhookMatchesAddress
+                ? 'Webhook orders/create configurado correctamente'
+                : 'Webhook orders/create detectado, pero apunta a otra URL'}
+            </p>
+            <p className="mt-2 text-sm">Actual: <span className="font-mono break-all">{ordersCreateWebhook?.address}</span></p>
+            <p className="mt-1 text-sm">Esperado: <span className="font-mono break-all">{expectedWebhookAddress}</span></p>
+          </div>
+        ) : (
+          <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4 text-yellow-900">
+            <p className="font-medium">No se encontró suscripción orders/create en Shopify.</p>
+            <p className="mt-2 text-sm">Debes crear un webhook que apunte a:</p>
+            <p className="mt-1 text-sm font-mono break-all">{expectedWebhookAddress}</p>
+          </div>
+        )}
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
@@ -762,6 +829,11 @@ export default function ShopifyIntegrationModule() {
                 <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
                   El token de Shopify ya no se configura aqui. La autenticacion se obtiene automaticamente desde los
                   secrets del servidor usando `SHOPIFY_SHOP`, `SHOPIFY_CLIENT_ID` y `SHOPIFY_CLIENT_SECRET`.
+                </div>
+
+                <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
+                  La validacion del webhook tambien usa el `SHOPIFY_CLIENT_SECRET` server-side. El campo manual de
+                  secreto ya no es necesario para operar la integracion.
                 </div>
 
                 <div>

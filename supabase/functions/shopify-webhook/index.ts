@@ -30,6 +30,20 @@ interface ShopifyOrder {
 
 const textEncoder = new TextEncoder();
 
+function getRequiredEnv(name: string): string {
+  const value = Deno.env.get(name);
+
+  if (!value) {
+    throw new Error(`Missing required env var: ${name}`);
+  }
+
+  return value;
+}
+
+function normalizeShopDomain(value: string): string {
+  return value.replace(/^https?:\/\//i, "").replace(/\/$/, "").trim().toLowerCase();
+}
+
 function toBase64(bytes: Uint8Array): string {
   let binary = "";
   for (const byte of bytes) {
@@ -91,8 +105,10 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabaseUrl = getRequiredEnv("SUPABASE_URL");
+    const supabaseKey = getRequiredEnv("SUPABASE_SERVICE_ROLE_KEY");
+    const shopifyClientSecret = getRequiredEnv("SHOPIFY_CLIENT_SECRET");
+    const shopifyShopDomain = `${getRequiredEnv("SHOPIFY_SHOP")}.myshopify.com`;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const topic = req.headers.get("X-Shopify-Topic");
@@ -113,7 +129,7 @@ Deno.serve(async (req: Request) => {
 
     const { data: config } = await supabase
       .from("shopify_config")
-      .select("shop_domain, webhook_secret, is_active")
+      .select("shop_domain, is_active")
       .eq("is_active", true)
       .maybeSingle();
 
@@ -127,17 +143,14 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    if (!config.webhook_secret) {
-      return new Response(
-        JSON.stringify({ error: "Missing webhook secret" }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
-    }
+    const normalizedIncomingShopDomain = normalizeShopDomain(shopDomain);
+    const normalizedConfigDomain = normalizeShopDomain(config.shop_domain || shopifyShopDomain);
+    const normalizedSecretDomain = normalizeShopDomain(shopifyShopDomain);
 
-    if (config.shop_domain !== shopDomain) {
+    if (
+      normalizedIncomingShopDomain !== normalizedConfigDomain ||
+      normalizedIncomingShopDomain !== normalizedSecretDomain
+    ) {
       return new Response(
         JSON.stringify({ error: "Shop domain mismatch" }),
         {
@@ -147,7 +160,7 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const isValidWebhook = await verifyShopifyWebhook(rawBody, hmac, config.webhook_secret);
+    const isValidWebhook = await verifyShopifyWebhook(rawBody, hmac, shopifyClientSecret);
 
     if (!isValidWebhook) {
       return new Response(
@@ -240,7 +253,7 @@ Deno.serve(async (req: Request) => {
 
       const { error: orderError } = await supabase
         .from("shopify_orders")
-        .insert({
+        .upsert({
           shopify_order_id: orderData.id.toString(),
           order_number: orderData.order_number.toString(),
           customer_id: customerId,
@@ -248,6 +261,9 @@ Deno.serve(async (req: Request) => {
           commission_amount: commissionAmount,
           net_amount: netAmount,
           order_data: orderData,
+        }, {
+          onConflict: "shopify_order_id",
+          ignoreDuplicates: false,
         });
 
       if (orderError) {

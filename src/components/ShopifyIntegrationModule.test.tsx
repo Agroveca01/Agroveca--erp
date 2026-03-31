@@ -98,6 +98,10 @@ describe('ShopifyIntegrationModule – Panel de Salud Shopify', () => {
         return Promise.resolve({ data: { locations: [] }, error: null });
       }
 
+      if (functionName === 'shopify-webhooks') {
+        return Promise.resolve({ data: { webhooks: [] }, error: null });
+      }
+
       return Promise.resolve({ data: { unmapped: [] }, error: null });
     });
     mockMaybeSingle.mockResolvedValue({ data: null, error: null });
@@ -200,7 +204,7 @@ describe('ShopifyIntegrationModule – Panel de Salud Shopify', () => {
         shopify_variant_id: 'gid://shopify/ProductVariant/2001',
       });
       expect(mockProductsEq).toHaveBeenCalledWith('id', 'erp-1');
-      expect(mockInvoke).toHaveBeenCalledTimes(2);
+      expect(mockInvoke).toHaveBeenCalledTimes(3);
     });
   });
 
@@ -239,6 +243,10 @@ describe('ShopifyIntegrationModule – Panel de Salud Shopify', () => {
         });
       }
 
+      if (functionName === 'shopify-webhooks') {
+        return Promise.resolve({ data: { webhooks: [] }, error: null });
+      }
+
       return Promise.resolve({ data: { unmapped: [] }, error: null });
     });
 
@@ -269,5 +277,35 @@ describe('ShopifyIntegrationModule – Panel de Salud Shopify', () => {
     await waitFor(() => {
       expect(screen.getByDisplayValue('gid://shopify/Location/123456789')).toBeInTheDocument();
     });
+  });
+
+  it('muestra el estado del webhook orders/create cuando existe', async () => {
+    mockInvoke.mockImplementation((functionName?: string) => {
+      if (functionName === 'shopify-webhooks') {
+        return Promise.resolve({
+          data: {
+            webhooks: [
+              {
+                id: '1',
+                topic: 'orders/create',
+                address: 'http://localhost:3000/functions/v1/shopify-webhook',
+                api_version: '2026-01',
+              },
+            ],
+          },
+          error: null,
+        });
+      }
+
+      if (functionName === 'shopify-locations') {
+        return Promise.resolve({ data: { locations: [] }, error: null });
+      }
+
+      return Promise.resolve({ data: { unmapped: [] }, error: null });
+    });
+
+    render(<ShopifyIntegrationModule />);
+
+    expect(await screen.findByText(/Webhook orders\/create configurado correctamente/i)).toBeInTheDocument();
   });
 });

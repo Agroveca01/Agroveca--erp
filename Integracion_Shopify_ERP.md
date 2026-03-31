@@ -35,6 +35,7 @@
 - [ ] Los secrets y credenciales nunca se muestran en texto plano ni se capturan desde la UI.
 - [ ] Hay registro de auditoría básico: quién inicia sync/config cambios, cuándo.
 - [ ] Hay gestión de renovaciones de token o vencimientos mediante obtención programática server-side.
+- [ ] La validación HMAC de webhooks usa el client secret server-side del app, no un secreto manual distinto cargado en UI.
 
 
 ## 2. Requisitos y Necesidades para la Integración (Previo a Implementación)
