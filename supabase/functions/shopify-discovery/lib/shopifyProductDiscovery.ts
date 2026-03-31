@@ -60,20 +60,20 @@ export function findUnmappedShopifyProducts(
   shopify: ShopifyApiProduct[],
   erp: Product[],
 ): Array<{ shopifyProduct: ShopifyApiProduct; variant: {id: string; sku: string}; suggestedMatch: Product | null }> {
-  // NOTA: Actualmente el modelo Product no tiene shopify_product_id/shopify_variant_id,
-// por lo que la comparación se hace sólo por SKU (product_id de ERP vs sku de Shopify).
-// TODO: Extender Product y persistencia para soportar referencias directas a productos/variantes Shopify (automatización completa).
-
-  const erpProductIds = new Set(erp.map(p => p.product_id));
+  const mappedVariantIds = new Set(
+    erp
+      .map((p) => p.shopify_variant_id)
+      .filter((value): value is string => Boolean(value)),
+  );
 
   const unmappedSuggestions: Array<{ shopifyProduct: ShopifyApiProduct; variant: {id: string; sku: string}; suggestedMatch: Product | null }> = [];
 
   for (const product of shopify) {
     for (const variant of product.variants) {
-      // Si la SKU de variante Shopify no existe actualmente como product_id en ERP, proponer mapping
-      if (!erpProductIds.has(variant.sku)) {
-        // Sugerir match si SKU parece coincidir (es igual al product_id ERP)
-        const match = erp.find(p => p.product_id === variant.sku);
+      if (!mappedVariantIds.has(variant.id)) {
+        const match = erp.find(
+          (p) => p.product_id === variant.sku && !p.shopify_variant_id,
+        );
         unmappedSuggestions.push({
           shopifyProduct: product,
           variant: { id: variant.id, sku: variant.sku },

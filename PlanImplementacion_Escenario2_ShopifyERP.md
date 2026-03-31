@@ -23,14 +23,14 @@ Implementar una automatización progresiva en la integración ERP–Shopify de C
 
 ### 3. Implementación del panel de salud de integración
 - Crear un panel en el ERP que muestre:
-    - Estado del access token (vigente, a punto de expirar, fallas).
+    - Estado de autenticación Shopify server-side (vigente, con fallas o mal configurada).
     - Últimos logs: errores, sincronizaciones exitosas/fallidas, y eventos destacados.
     - Alertas activas: productos pendientes de mapear, problemas de token, sincronizaciones anómalas.
     - Estado general del sistema (OK, advertencias, críticas).
 - Definir diferentes perfiles de usuario y niveles de acceso a la información.
 
 ### 4. Sistema de alertas y notificaciones
-- Desarrollar sistema de alertas automáticas ante Expiración/fallo de token, productos no mapeados y sincronizaciones fallidas.
+- Desarrollar sistema de alertas automáticas ante fallas de autenticación/configuración server-side, productos no mapeados y sincronizaciones fallidas.
 - Determinar y configurar los canales de alerta (panel, correo, etc.) y la frecuencia/intensidad de las notificaciones.
 
 ### 5. Pruebas integrales y ajustes con usuarios clave

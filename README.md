@@ -100,6 +100,26 @@ Estas variables no deben exponerse al frontend ni vivir en archivos `VITE_*`.
 4. Invoca `GET /functions/v1/shopify-discovery` con el header `Authorization: Bearer <jwt>`.
 5. Espera una respuesta con `unmapped`; si Shopify falla, el endpoint responderá con error `502`.
 
+## Regla de unicidad para variantes Shopify
+
+- Cada `shopify_variant_id` solo puede pertenecer a un producto ERP.
+- La app ya lo valida en UI y además existe una migración para reforzarlo en base de datos.
+- Si la migración falla, primero debes corregir manualmente cualquier variante Shopify duplicada en `products`.
+
+## Configuración operativa de stock sync
+
+- `SHOPIFY_SHOP` es la fuente de verdad server-side para la tienda Shopify.
+- `shopify_config.shop_domain` debe coincidir con ese valor (ejemplo: `mi-tienda.myshopify.com`).
+- `shopify_config.shopify_location_id` define la ubicación exacta donde se sincroniza el stock. Si no se configura, la función intentará usar la primera location devuelta por Shopify.
+
+### Cómo obtener y probar la location correcta
+
+1. Abre `Integración Shopify > Configurar`.
+2. Espera a que cargue la lista `Locations disponibles en Shopify`.
+3. Haz clic en `Usar esta` sobre la ubicación que debe reflejar el stock del ERP.
+4. Guarda la configuración.
+5. Ejecuta una sincronización manual con un producto ya mapeado y revisa `Últimas Sincronizaciones`.
+
 ## Checklist para el equipo
 
 - [ ] Asegúrate de no tener claves reales en `.env` ni en otros archivos del repo.

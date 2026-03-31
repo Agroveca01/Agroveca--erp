@@ -1,5 +1,73 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 
+let shopifyAccessToken: string | undefined;
+let shopifyTokenExpiresAt = 0;
+
+function getRequiredEnv(name: string): string {
+  const value = Deno.env.get(name);
+
+  if (!value) {
+    throw new Error(`Missing required env var: ${name}`);
+  }
+
+  return value;
+}
+
+async function getShopifyAccessToken(): Promise<string> {
+  const shop = getRequiredEnv("SHOPIFY_SHOP");
+  const clientId = getRequiredEnv("SHOPIFY_CLIENT_ID");
+  const clientSecret = getRequiredEnv("SHOPIFY_CLIENT_SECRET");
+
+  if (shopifyAccessToken && Date.now() < shopifyTokenExpiresAt - 60000) {
+    return shopifyAccessToken;
+  }
+
+  const tokenUrl = `https://${shop}.myshopify.com/admin/oauth/access_token`;
+  const response = await fetch(tokenUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      client_id: clientId,
+      client_secret: clientSecret,
+      grant_type: "client_credentials",
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to obtain Shopify token (${response.status})`);
+  }
+
+  const { access_token, expires_in } = await response.json();
+  shopifyAccessToken = access_token;
+  shopifyTokenExpiresAt = Date.now() + (Number(expires_in) || 86400) * 1000;
+  return access_token;
+}
+
+function normalizeShopDomain(value: string): string {
+  return value.replace(/^https?:\/\//i, "").replace(/\/$/, "").trim().toLowerCase();
+}
+
+function getConfiguredShopDomain(configShopDomain?: string | null): string {
+  const envShop = getRequiredEnv("SHOPIFY_SHOP");
+  const envShopDomain = `${envShop}.myshopify.com`.toLowerCase();
+
+  if (!configShopDomain) {
+    return envShopDomain;
+  }
+
+  const normalizedConfigDomain = normalizeShopDomain(configShopDomain);
+
+  if (normalizedConfigDomain !== envShopDomain) {
+    throw new Error(`Shopify shop mismatch between config (${normalizedConfigDomain}) and server secret (${envShopDomain})`);
+  }
+
+  return normalizedConfigDomain;
+}
+
+function normalizeLocationId(value: string): string {
+  return value.includes('/') ? (value.split('/').pop() || '') : value;
+}
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
@@ -103,16 +171,6 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    if (!config.access_token || !config.shop_domain) {
-      return new Response(
-        JSON.stringify({ error: "Missing Shopify credentials" }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
-    }
-
     const { product_id, quantity }: SyncRequest = await req.json();
 
     if (!product_id) {
@@ -153,7 +211,10 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const shopifyUrl = `https://${config.shop_domain}/admin/api/${config.api_version}/inventory_levels/set.json`;
+    const shopDomain = getConfiguredShopDomain(config.shop_domain);
+
+    const shopifyAccessToken = await getShopifyAccessToken();
+    const shopifyUrl = `https://${shopDomain}/admin/api/${config.api_version}/inventory_levels/set.json`;
 
     const { data: inventoryData } = await supabase
       .from("products")
@@ -163,11 +224,13 @@ Deno.serve(async (req: Request) => {
 
     const stockQuantity = quantity !== undefined ? quantity : (inventoryData?.stock_quantity || 0);
 
-    const locationId = await getShopifyLocationId(
-      config.shop_domain,
-      config.api_version,
-      config.access_token
-    );
+    const locationId = config.shopify_location_id
+      ? normalizeLocationId(config.shopify_location_id)
+      : await getShopifyLocationId(
+          shopDomain,
+          config.api_version,
+          shopifyAccessToken
+        );
 
     if (!locationId) {
       await supabase.from("stock_sync_log").insert({
@@ -189,9 +252,9 @@ Deno.serve(async (req: Request) => {
     }
 
     const inventoryItemId = await getInventoryItemId(
-      config.shop_domain,
+      shopDomain,
       config.api_version,
-      config.access_token,
+      shopifyAccessToken,
       product.shopify_variant_id
     );
 
@@ -218,7 +281,7 @@ Deno.serve(async (req: Request) => {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "X-Shopify-Access-Token": config.access_token,
+        "X-Shopify-Access-Token": shopifyAccessToken,
       },
       body: JSON.stringify({
         location_id: locationId,
@@ -313,7 +376,13 @@ async function getInventoryItemId(
   variantId: string
 ): Promise<string | null> {
   try {
-    const url = `https://${shopDomain}/admin/api/${apiVersion}/variants/${variantId}.json`;
+    const numericVariantId = variantId.split('/').pop();
+
+    if (!numericVariantId) {
+      return null;
+    }
+
+    const url = `https://${shopDomain}/admin/api/${apiVersion}/variants/${numericVariantId}.json`;
     const response = await fetch(url, {
       headers: {
         "X-Shopify-Access-Token": accessToken,

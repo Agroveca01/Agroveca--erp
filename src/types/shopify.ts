@@ -21,6 +21,8 @@ export interface Product {
   ph_target: number | null;
   production_unit_liters: number;
   base_price: number;
+  shopify_product_id?: string | null;
+  shopify_variant_id?: string | null;
   units_per_batch?: number | null;
 }
 

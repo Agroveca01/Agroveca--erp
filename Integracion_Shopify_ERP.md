@@ -3,7 +3,7 @@
 ## 1. Checklist de Validación Funcional (Para Negocio y Técnicos)
 
 ### A. Estado General de la Integración
-- [ ] Existe registro/configuración de la tienda Shopify en el ERP (url tienda, access token).
+- [ ] Existe registro/configuración de la tienda Shopify en el ERP (dominio, versión API, webhook y parámetros operativos). La autenticación se obtiene desde secrets server-side.
 - [ ] El usuario administrador visualiza una sección dedicada a Shopify en el ERP.
 - [ ] Se muestra el estado de la integración (activa/desactivada/con errores).
 - [ ] Hay visibilidad de logs/métricas de integración recientes (sincronización y pedidos).
@@ -25,23 +25,23 @@
 - [ ] El flujo contempla y registra errores de mapping/fallas de integración con trazabilidad.
 
 ### D. Interfaz y Experiencia de Usuario
-- [ ] El ERP provee instrucciones simples y visibles para conectar Shopify (tokens, pasos, links relevantes).
-- [ ] Hay avisos/claves visuales si falta información crítica (tokens, URLs, productos sin linkear, etc).
+- [ ] El ERP provee instrucciones simples y visibles para conectar Shopify (dominio, webhook, pasos, links relevantes y nota de credenciales server-side).
+- [ ] Hay avisos/claves visuales si falta información crítica (secrets/configuración, URLs, productos sin linkear, etc).
 - [ ] Existe ayuda contextual o acceso a soporte/documentación.
 - [ ] Logs/errores tienen mensajes legibles para usuarios no técnicos, sugiriendo pasos de solución.
 
 ### E. Seguridad y Control
 - [ ] Sólo usuarios administradores pueden administrar la integración.
-- [ ] Los tokens y credenciales nunca se muestran en texto plano tras ser ingresados.
+- [ ] Los secrets y credenciales nunca se muestran en texto plano ni se capturan desde la UI.
 - [ ] Hay registro de auditoría básico: quién inicia sync/config cambios, cuándo.
-- [ ] Hay gestión de renovaciones de token o vencimientos.
+- [ ] Hay gestión de renovaciones de token o vencimientos mediante obtención programática server-side.
 
 
 ## 2. Requisitos y Necesidades para la Integración (Previo a Implementación)
 
 ### A. Accesos y Credenciales Necesarios
-- Acceso de administrador a tienda Shopify (permite generar Access Token y seleccionar scopes).
-- Access Token/Clave API generado en Shopify con scopes mínimos requeridos (inventario, pedidos, productos, etc).
+- Acceso de administrador a tienda Shopify.
+- Client ID y Client Secret del app de Shopify con scopes mínimos requeridos (inventario, pedidos, productos, etc).
 - Webhook URL generado desde el ERP (debe configurarse en Shopify para órdenes nuevas).
 - Acceso de administrador en ERP para registrar la tienda y configurar integración.
 
@@ -56,11 +56,11 @@
 
 ## 3. Recomendaciones y Acciones de Mejora
 
-- Incluir "prueba de conexión" (health check) para validar credenciales y conectividad con Shopify en la UI.
+- Incluir "prueba de conexión" (health check) para validar conectividad, secrets server-side y acceso a Shopify desde la UI.
 - Mostrar dashboard de salud de integración (último sync, errores recientes, pedidos sin procesar).
 - Mejorar claridad de logs/errores en la interfaz para usuarios de negocio.
 - Documentar mejor el proceso para mapear productos y configurar webhooks (instrucciones paso a paso).
-- Automatizar validación de scopes y expiración de tokens, alertando proactivamente si hay problema.
+- Automatizar validación de scopes y estado de autenticación server-side, alertando proactivamente si hay problema.
 - Actualmente, NO existe sincronización automática de catálogo/productos; esta tarea (crear, actualizar o mapear productos de Shopify en el ERP) debe realizarse manualmente.
 - Planificar la extensión para sincronizar catálogo completo (productos/estados), devoluciones y actualizaciones de pedidos.
 - Definir sección de "contacto soporte" y FAQ en la interfaz.

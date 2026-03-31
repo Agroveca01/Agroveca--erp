@@ -1,6 +1,6 @@
 export interface ShopifyConfigFormValues {
   shop_domain: string;
-  access_token: string;
+  shopify_location_id: string;
   api_version: string;
   webhook_secret: string;
   commission_percentage: number;
@@ -29,7 +29,7 @@ export interface ShopifyOrderSummary {
 
 export const DEFAULT_SHOPIFY_CONFIG_FORM: ShopifyConfigFormValues = {
   shop_domain: '',
-  access_token: '',
+  shopify_location_id: '',
   api_version: '2024-01',
   webhook_secret: '',
   commission_percentage: 2,
@@ -39,7 +39,7 @@ export const DEFAULT_SHOPIFY_CONFIG_FORM: ShopifyConfigFormValues = {
 export const mapShopifyConfigToForm = (config: ShopifyConfigRecord): ShopifyConfigFormValues => {
   return {
     shop_domain: config.shop_domain,
-    access_token: config.access_token || '',
+    shopify_location_id: (config as ShopifyConfigRecord & { shopify_location_id?: string | null }).shopify_location_id || '',
     api_version: config.api_version,
     webhook_secret: config.webhook_secret || '',
     commission_percentage: config.commission_percentage,

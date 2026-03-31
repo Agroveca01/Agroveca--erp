@@ -18,6 +18,8 @@ export interface ProductFormValues {
   format: string;
   color: string;
   base_price: number;
+  shopify_product_id: string;
+  shopify_variant_id: string;
 }
 
 export type InventoryView = 'raw' | 'finished';
@@ -49,6 +51,8 @@ export const DEFAULT_PRODUCT_FORM: ProductFormValues = {
   format: '',
   color: '#94a3b8',
   base_price: 0,
+  shopify_product_id: '',
+  shopify_variant_id: '',
 };
 
 export const mapRawMaterialToForm = (material: RawMaterial): RawMaterialFormValues => {
@@ -70,6 +74,8 @@ export const mapProductToForm = (product: Product): ProductFormValues => {
     format: product.format || '',
     color: product.color || '#94a3b8',
     base_price: product.base_price,
+    shopify_product_id: product.shopify_product_id || '',
+    shopify_variant_id: product.shopify_variant_id || '',
   };
 };
 

@@ -13,7 +13,7 @@ import { ShopifyDiscoveryResponse } from '../types/shopify';
 interface ShopifyConfig {
   id: string;
   shop_domain: string;
-  access_token: string;
+  shopify_location_id?: string | null;
   api_version: string;
   webhook_secret: string;
   commission_percentage: number;
@@ -42,48 +42,125 @@ interface ShopifyOrder {
   created_at: string;
 }
 
+interface ShopifyLocation {
+  id: string;
+  legacy_id: string;
+  name: string;
+  active: boolean;
+}
+
 export default function ShopifyIntegrationModule() {
 
   const [shopifyDiscovery, setShopifyDiscovery] = useState<ShopifyDiscoveryResponse | null>(null);
   const [discoveryLoading, setDiscoveryLoading] = useState(false);
   const [discoveryError, setDiscoveryError] = useState<string | null>(null);
+  const [linkingVariantId, setLinkingVariantId] = useState<string | null>(null);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
 
   const { session } = useAuth();
 
 
   useEffect(() => {
-    setDiscoveryLoading(true);
-    setDiscoveryError(null);
+    loadShopifyDiscovery().catch((err) => {
+      setDiscoveryError(err?.message || 'Error desconocido');
+      setDiscoveryLoading(false);
+    });
+  }, [session]);
 
+  const loadShopifyDiscovery = async () => {
     if (!session) {
+      setShopifyDiscovery(null);
       setDiscoveryError('Debes iniciar sesión para consultar salud de integración Shopify');
       setDiscoveryLoading(false);
       return;
     }
 
+    setDiscoveryLoading(true);
+    setDiscoveryError(null);
 
-    supabase.functions.invoke('shopify-discovery', {
-      method: 'GET',
-    })
-      .then(({ data, error }) => {
-        if (error) {
-          if (
-            error.status === 401 ||
-            /jwt/i.test(error.message) ||
-            /No autorizado/i.test(error.message) ||
-            /JWT inválido|expired|unauthorized|401/i.test(error.message)
-          ) {
-            throw new Error('Debes iniciar sesión para consultar salud de integración Shopify');
-          }
-          throw new Error('Error al consultar descubrimiento Shopify: ' + error.message);
+    try {
+      const { data, error } = await supabase.functions.invoke('shopify-discovery', {
+        method: 'GET',
+      });
+
+      if (error) {
+        if (
+          error.status === 401 ||
+          /jwt/i.test(error.message) ||
+          /No autorizado/i.test(error.message) ||
+          /JWT inválido|expired|unauthorized|401/i.test(error.message)
+        ) {
+          throw new Error('Debes iniciar sesión para consultar salud de integración Shopify');
         }
-        setShopifyDiscovery(data as ShopifyDiscoveryResponse);
-      })
-      .catch((err) => {
-        setDiscoveryError(err?.message || 'Error desconocido');
-      })
-      .finally(() => setDiscoveryLoading(false));
-  }, [session]);
+
+        throw new Error('Error al consultar descubrimiento Shopify: ' + error.message);
+      }
+
+      setShopifyDiscovery(data as ShopifyDiscoveryResponse);
+    } finally {
+      setDiscoveryLoading(false);
+    }
+  };
+
+  const linkSuggestedProduct = async (item: ShopifyDiscoveryResponse['unmapped'][number]) => {
+    if (!item.suggestedMatch) {
+      return;
+    }
+
+    setLinkingVariantId(item.variant.id);
+
+    try {
+      const { data: existingLink, error: existingLinkError } = await supabase
+        .from('products')
+        .select('id, name, product_id')
+        .eq('shopify_variant_id', item.variant.id)
+        .maybeSingle();
+
+      if (existingLinkError) {
+        throw existingLinkError;
+      }
+
+      if (existingLink && existingLink.id !== item.suggestedMatch.id) {
+        throw new Error(`La variante Shopify ya está vinculada al producto ERP ${existingLink.name} (${existingLink.product_id}).`);
+      }
+
+      const { error } = await supabase
+        .from('products')
+        .update({
+          shopify_product_id: item.shopifyProduct.id,
+          shopify_variant_id: item.variant.id,
+        })
+        .eq('id', item.suggestedMatch.id);
+
+      if (error) {
+        throw error;
+      }
+
+      await loadShopifyDiscovery();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Error desconocido';
+      alert(`No se pudo vincular la variante Shopify: ${message}`);
+    } finally {
+      setLinkingVariantId(null);
+    }
+  };
+
+  const copyToClipboard = async (value: string, fieldKey: string) => {
+    try {
+      if (!navigator?.clipboard?.writeText) {
+        throw new Error('Tu navegador no soporta copiado automático.');
+      }
+
+      await navigator.clipboard.writeText(value);
+      setCopiedField(fieldKey);
+      window.setTimeout(() => {
+        setCopiedField((current) => (current === fieldKey ? null : current));
+      }, 1500);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Error desconocido';
+      alert(`No se pudo copiar el ID: ${message}`);
+    }
+  };
 
   const { isAdmin } = useAuth();
   const [config, setConfig] = useState<ShopifyConfig | null>(null);
@@ -92,12 +169,39 @@ export default function ShopifyIntegrationModule() {
   const [shopifyOrders, setShopifyOrders] = useState<ShopifyOrder[]>([]);
   const [showConfig, setShowConfig] = useState(false);
   const [configForm, setConfigForm] = useState(DEFAULT_SHOPIFY_CONFIG_FORM);
+  const [locations, setLocations] = useState<ShopifyLocation[]>([]);
+  const [locationsLoading, setLocationsLoading] = useState(false);
+  const [locationsError, setLocationsError] = useState<string | null>(null);
 
   useEffect(() => {
     loadConfig();
     loadSyncLogs();
     loadShopifyOrders();
   }, []);
+
+  useEffect(() => {
+    if (!showConfig || !session) {
+      return;
+    }
+
+    setLocationsLoading(true);
+    setLocationsError(null);
+
+    supabase.functions.invoke('shopify-locations', {
+      method: 'GET',
+    }).then(({ data, error }) => {
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      setLocations((data?.locations || []) as ShopifyLocation[]);
+    }).catch((error) => {
+      setLocationsError(error instanceof Error ? error.message : 'Error desconocido');
+      setLocations([]);
+    }).finally(() => {
+      setLocationsLoading(false);
+    });
+  }, [showConfig, session]);
 
   const loadConfig = async () => {
     setLoading(true);
@@ -312,6 +416,12 @@ export default function ShopifyIntegrationModule() {
           <p className="text-sm text-green-800">
             Tienda: <strong>{config.shop_domain}</strong>
           </p>
+          <p className="text-sm text-green-800">
+            Location Shopify: <strong>{config.shopify_location_id || 'No configurada'}</strong>
+          </p>
+          <p className="text-sm text-green-800">
+            Autenticación de Shopify: <strong>gestionada por secrets del servidor</strong>
+          </p>
           {config.last_sync_at && (
             <p className="text-sm text-green-800">
               Última sincronización: {new Date(config.last_sync_at).toLocaleString('es-CL')}
@@ -479,47 +589,88 @@ export default function ShopifyIntegrationModule() {
              <div className="overflow-x-auto">
                <table className="w-full border border-gray-300 rounded-lg text-sm" style={{borderCollapse:'collapse'}}>
                  <thead className="bg-gray-100">
-                   <tr>
-                     <th className="border border-gray-300 px-4 py-2 text-gray-800 font-bold">Producto Shopify</th>
-                     <th className="border border-gray-300 px-4 py-2 text-gray-800 font-bold">Variante</th>
-                     <th className="border border-gray-300 px-4 py-2 text-gray-800 font-bold">SKU</th>
-                     <th className="border border-gray-300 px-4 py-2 text-gray-800 font-bold">Sugerencia del ERP</th>
-                   </tr>
-                 </thead>
-                 <tbody>
-                   {shopifyDiscovery.unmapped.length === 0 && (
-                     <tr>
-                       <td colSpan={4} className="py-8 text-center text-gray-500">No hay productos sin mapear actualmente.</td>
-                     </tr>
-                   )}
-                   {shopifyDiscovery.unmapped.map((item: import('../types/shopify').UnmappedShopifyProduct, idx: number) => (
-                     <tr key={item.variant.id + '-' + idx} className={idx%2===0 ? 'bg-gray-50' : 'bg-white'}>
-                       <td className="border border-gray-200 px-4 py-2 text-gray-900">{item.shopifyProduct.title}</td>
-                       <td className="border border-gray-200 px-4 py-2 text-gray-900">{(() => {
-                         const variant = item.shopifyProduct.variants.find(v => v.id === item.variant.id);
-                         return variant?.title || '-';
-                       })()}</td>
-                       <td className="border border-gray-200 px-4 py-2 text-gray-900">{item.variant.sku}</td>
-                       <td className="border border-gray-200 px-4 py-2 text-gray-900">
-                         {item.suggestedMatch ? (
-                           <span className="inline-block bg-blue-50 text-blue-800 text-xs font-medium px-2 py-1 rounded-lg">
-                             {item.suggestedMatch.name || item.suggestedMatch.product_id}
-                           </span>
-                         ) : (
-                           <span className="inline-block text-xs text-gray-400">Sin sugerencia</span>
-                         )}
-                       </td>
-                     </tr>
-                   ))}
-                 </tbody>
-               </table>
-             </div>
-             <div className="mt-4 text-sm text-yellow-900">
-               Para mapear un producto, ve al menú lateral y haz click en <strong>Productos</strong>.<br />
-               Allí puedes vincular el SKU o ID correspondiente.
-               <br />
-               <a href="/productos" className="inline-block mt-3 bg-yellow-300 text-yellow-900 font-bold no-underline px-4 py-2 rounded-md hover:bg-yellow-400 transition-colors">
-                 Ir al módulo Productos
+                    <tr>
+                      <th className="border border-gray-300 px-4 py-2 text-gray-800 font-bold">Producto Shopify</th>
+                      <th className="border border-gray-300 px-4 py-2 text-gray-800 font-bold">Shopify Product ID</th>
+                      <th className="border border-gray-300 px-4 py-2 text-gray-800 font-bold">Variante</th>
+                      <th className="border border-gray-300 px-4 py-2 text-gray-800 font-bold">Shopify Variant ID</th>
+                      <th className="border border-gray-300 px-4 py-2 text-gray-800 font-bold">SKU</th>
+                      <th className="border border-gray-300 px-4 py-2 text-gray-800 font-bold">Sugerencia del ERP</th>
+                      <th className="border border-gray-300 px-4 py-2 text-gray-800 font-bold">Accion</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {shopifyDiscovery.unmapped.length === 0 && (
+                      <tr>
+                        <td colSpan={7} className="py-8 text-center text-gray-500">No hay productos sin mapear actualmente.</td>
+                      </tr>
+                    )}
+                    {shopifyDiscovery.unmapped.map((item: import('../types/shopify').UnmappedShopifyProduct, idx: number) => (
+                      <tr key={item.variant.id + '-' + idx} className={idx%2===0 ? 'bg-gray-50' : 'bg-white'}>
+                        <td className="border border-gray-200 px-4 py-2 text-gray-900">{item.shopifyProduct.title}</td>
+                        <td className="border border-gray-200 px-4 py-2 text-xs text-gray-700">
+                          <div className="space-y-2">
+                            <div className="break-all">{item.shopifyProduct.id}</div>
+                            <button
+                              type="button"
+                              onClick={() => copyToClipboard(item.shopifyProduct.id, `product-${item.shopifyProduct.id}`)}
+                              className="inline-flex items-center rounded-md bg-slate-200 px-2 py-1 text-xs font-medium text-slate-800 hover:bg-slate-300"
+                            >
+                              {copiedField === `product-${item.shopifyProduct.id}` ? 'Copiado' : 'Copiar'}
+                            </button>
+                          </div>
+                        </td>
+                        <td className="border border-gray-200 px-4 py-2 text-gray-900">{(() => {
+                          const variant = item.shopifyProduct.variants.find(v => v.id === item.variant.id);
+                          return variant?.title || '-';
+                        })()}</td>
+                        <td className="border border-gray-200 px-4 py-2 text-xs text-gray-700">
+                          <div className="space-y-2">
+                            <div className="break-all">{item.variant.id}</div>
+                            <button
+                              type="button"
+                              onClick={() => copyToClipboard(item.variant.id, `variant-${item.variant.id}`)}
+                              className="inline-flex items-center rounded-md bg-slate-200 px-2 py-1 text-xs font-medium text-slate-800 hover:bg-slate-300"
+                            >
+                              {copiedField === `variant-${item.variant.id}` ? 'Copiado' : 'Copiar'}
+                            </button>
+                          </div>
+                        </td>
+                        <td className="border border-gray-200 px-4 py-2 text-gray-900">{item.variant.sku}</td>
+                        <td className="border border-gray-200 px-4 py-2 text-gray-900">
+                          {item.suggestedMatch ? (
+                            <span className="inline-block bg-blue-50 text-blue-800 text-xs font-medium px-2 py-1 rounded-lg">
+                              {item.suggestedMatch.name || item.suggestedMatch.product_id}
+                            </span>
+                          ) : (
+                            <span className="inline-block text-xs text-gray-400">Sin sugerencia</span>
+                          )}
+                        </td>
+                        <td className="border border-gray-200 px-4 py-2 text-gray-900">
+                          {item.suggestedMatch ? (
+                            <button
+                              type="button"
+                              onClick={() => linkSuggestedProduct(item)}
+                              disabled={linkingVariantId === item.variant.id}
+                              className="inline-flex items-center rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-emerald-300"
+                            >
+                              {linkingVariantId === item.variant.id ? 'Vinculando...' : 'Vincular'}
+                            </button>
+                          ) : (
+                            <span className="text-xs text-gray-400">Manual</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="mt-4 text-sm text-yellow-900">
+                Si existe sugerencia, puedes vincular directamente desde aquí. Si no, ve al módulo <strong>Productos</strong> y completa los IDs manualmente.<br />
+                La vinculacion siempre se hace por SKU ERP hacia una variante especifica de Shopify.
+                <br />
+                <a href="/productos" className="inline-block mt-3 bg-yellow-300 text-yellow-900 font-bold no-underline px-4 py-2 rounded-md hover:bg-yellow-400 transition-colors">
+                  Ir al módulo Productos
                </a>
              </div>
            </>
@@ -549,14 +700,57 @@ export default function ShopifyIntegrationModule() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Access Token
+                  Shopify Location ID
                 </label>
                 <input
-                  type="password"
-                  value={configForm.access_token}
-                  onChange={(e) => setConfigForm({ ...configForm, access_token: e.target.value })}
+                  type="text"
+                  value={configForm.shopify_location_id}
+                  onChange={(e) => setConfigForm({ ...configForm, shopify_location_id: e.target.value })}
+                  placeholder="gid://shopify/Location/... o ID numerico"
                   className="w-full px-4 py-2 border border-gray-300 bg-white text-slate-900 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                 />
+                <p className="mt-1 text-xs text-gray-500">
+                  Define la ubicacion exacta donde Shopify debe reflejar el stock del ERP.
+                </p>
+              </div>
+
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                <div className="flex items-center justify-between gap-3 mb-3">
+                  <h4 className="text-sm font-semibold text-slate-900">Locations disponibles en Shopify</h4>
+                  {locationsLoading && <span className="text-xs text-slate-500">Cargando...</span>}
+                </div>
+
+                {locationsError ? (
+                  <p className="text-sm text-red-600">No se pudieron cargar las locations: {locationsError}</p>
+                ) : locations.length === 0 ? (
+                  <p className="text-sm text-slate-600">Abre este modal con una sesion valida para consultar las locations activas.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {locations.map((location) => (
+                      <div key={location.id} className="rounded-md border border-slate-200 bg-white p-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <div className="font-medium text-slate-900">{location.name}</div>
+                            <div className="text-xs text-slate-500">Legacy ID: {location.legacy_id}</div>
+                            <div className="text-xs text-slate-500 break-all">{location.id}</div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setConfigForm({ ...configForm, shopify_location_id: location.id })}
+                            className="rounded-md bg-emerald-100 px-3 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-200"
+                          >
+                            Usar esta
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
+                El token de Shopify ya no se configura aqui. La autenticacion se obtiene automaticamente desde los
+                secrets del servidor usando `SHOPIFY_SHOP`, `SHOPIFY_CLIENT_ID` y `SHOPIFY_CLIENT_SECRET`.
               </div>
 
               <div>

@@ -27,6 +27,8 @@ describe('inventoryModuleHelpers', () => {
       format: '',
       color: '#94a3b8',
       base_price: 0,
+      shopify_product_id: '',
+      shopify_variant_id: '',
     });
   });
 
@@ -62,6 +64,8 @@ describe('inventoryModuleHelpers', () => {
         ph_target: null,
         production_unit_liters: 0.5,
         base_price: 3490,
+        shopify_product_id: null,
+        shopify_variant_id: null,
       }),
     ).toEqual({
       product_id: 'CTP-100',
@@ -70,6 +74,8 @@ describe('inventoryModuleHelpers', () => {
       format: '',
       color: '#94a3b8',
       base_price: 3490,
+      shopify_product_id: '',
+      shopify_variant_id: '',
     });
   });
 
