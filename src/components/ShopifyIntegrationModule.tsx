@@ -41,6 +41,8 @@ interface ShopifyOrder {
   commission_amount: number;
   net_amount: number;
   created_at: string;
+  inventory_processed_at?: string | null;
+  inventory_processing_error?: string | null;
 }
 
 interface ShopifyLocation {
@@ -55,6 +57,67 @@ interface ShopifyWebhookSubscription {
   topic: string;
   address: string;
   api_version: string;
+}
+
+interface ShopifyWebhookEvent {
+  id: string;
+  topic: string | null;
+  status: 'received' | 'rejected' | 'accepted' | 'processed' | 'failed';
+  shop_domain: string | null;
+  http_status: number | null;
+  error_message: string | null;
+  created_at: string;
+  processed_at: string | null;
+}
+
+function getWebhookSyncErrorMessage(error: string) {
+  if (/Invalid topic specified: orders\/create/i.test(error) || /missing access scope/i.test(error) || /Topics allowed:/i.test(error)) {
+    return 'Shopify rechazo el webhook porque la app no tiene permisos de pedidos. Revisa el scope `read_orders` y vuelve a autorizar la app.';
+  }
+
+  if (/Unauthorized|Missing authorization|Forbidden/i.test(error)) {
+    return 'Tu sesion no tiene permisos para registrar o reparar webhooks. Inicia sesion nuevamente con un usuario administrador.';
+  }
+
+  if (/Requested function was not found|NOT_FOUND/i.test(error)) {
+    return 'La funcion de sincronizacion del webhook no esta desplegada en Supabase. Debes desplegar `shopify-webhook-sync`.';
+  }
+
+  return error;
+}
+
+function getBusinessFriendlyWebhookEventMessage(event: ShopifyWebhookEvent) {
+  const message = event.error_message || '';
+
+  if (!message) {
+    return event.processed_at ? 'Procesado correctamente' : 'Pendiente de procesamiento';
+  }
+
+  if (/No ERP product linked to Shopify variant/i.test(message)) {
+    return 'Hay una variante de Shopify sin vincular a un producto del ERP. Completa el mapeo del producto y reintenta.';
+  }
+
+  if (/Stock terminado insuficiente/i.test(message)) {
+    return message;
+  }
+
+  if (/no tiene registro en inventario terminado/i.test(message)) {
+    return 'El producto vendido no tiene registro en inventario terminado. Crea o ajusta ese inventario en el ERP.';
+  }
+
+  if (/Invalid webhook signature/i.test(message)) {
+    return 'La firma HMAC del webhook no coincide. Revisa `SHOPIFY_CLIENT_SECRET` y la configuracion del app.';
+  }
+
+  if (/Shop domain mismatch/i.test(message)) {
+    return 'El webhook llego desde una tienda distinta a la configurada. Revisa `SHOPIFY_SHOP` y el dominio activo en el ERP.';
+  }
+
+  if (/Failed to save order/i.test(message)) {
+    return 'La orden llego desde Shopify, pero el ERP no pudo guardarla correctamente. Revisa el detalle tecnico y la base de datos.';
+  }
+
+  return message;
 }
 
 export default function ShopifyIntegrationModule() {
@@ -184,6 +247,9 @@ export default function ShopifyIntegrationModule() {
   const [webhooksLoading, setWebhooksLoading] = useState(false);
   const [webhooksError, setWebhooksError] = useState<string | null>(null);
   const [webhookSyncing, setWebhookSyncing] = useState(false);
+  const [webhookEvents, setWebhookEvents] = useState<ShopifyWebhookEvent[]>([]);
+  const [webhookEventsLoading, setWebhookEventsLoading] = useState(false);
+  const [webhookEventsError, setWebhookEventsError] = useState<string | null>(null);
 
   useEffect(() => {
     loadConfig();
@@ -219,6 +285,39 @@ export default function ShopifyIntegrationModule() {
 
   useEffect(() => {
     loadWebhookStatus();
+  }, [session]);
+
+  const loadWebhookEvents = async () => {
+    if (!session) {
+      setWebhookEvents([]);
+      return;
+    }
+
+    setWebhookEventsLoading(true);
+    setWebhookEventsError(null);
+
+    try {
+      const { data, error } = await supabase
+        .from('shopify_webhook_events')
+        .select('id, topic, status, shop_domain, http_status, error_message, created_at, processed_at')
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      if (error) {
+        throw error;
+      }
+
+      setWebhookEvents((data || []) as ShopifyWebhookEvent[]);
+    } catch (error) {
+      setWebhookEventsError(error instanceof Error ? error.message : 'Error desconocido');
+      setWebhookEvents([]);
+    } finally {
+      setWebhookEventsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadWebhookEvents();
   }, [session]);
 
   useEffect(() => {
@@ -343,8 +442,10 @@ export default function ShopifyIntegrationModule() {
       );
 
       await loadWebhookStatus();
+      await loadWebhookEvents();
     } catch (error) {
-      alert(error instanceof Error ? error.message : 'Error al registrar webhook');
+      const message = error instanceof Error ? error.message : 'Error al registrar webhook';
+      alert(getWebhookSyncErrorMessage(message));
     } finally {
       setWebhookSyncing(false);
     }
@@ -422,6 +523,22 @@ export default function ShopifyIntegrationModule() {
       currency: 'CLP',
       minimumFractionDigits: 0,
     }).format(amount);
+  };
+
+  const getWebhookEventBadge = (status: ShopifyWebhookEvent['status']) => {
+    if (status === 'processed') {
+      return 'bg-green-100 text-green-700';
+    }
+
+    if (status === 'accepted' || status === 'received') {
+      return 'bg-blue-100 text-blue-700';
+    }
+
+    if (status === 'failed' || status === 'rejected') {
+      return 'bg-red-100 text-red-700';
+    }
+
+    return 'bg-gray-100 text-gray-700';
   };
 
   if (!isAdmin) {
@@ -552,6 +669,85 @@ export default function ShopifyIntegrationModule() {
             <p className="mt-2 text-sm">Debes crear un webhook que apunte a:</p>
             <p className="mt-1 text-sm font-mono break-all">{expectedWebhookAddress}</p>
             <p className="mt-2 text-sm">Puedes registrarlo directamente desde este panel.</p>
+          </div>
+        )}
+      </div>
+
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900">Eventos recientes del Webhook</h3>
+            <p className="text-sm text-gray-600">Traza recepcion, procesamiento y fallos recientes de pedidos Shopify.</p>
+          </div>
+          {webhookEventsLoading && <span className="text-sm text-gray-500">Cargando...</span>}
+        </div>
+
+        {webhookEventsError ? (
+          <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700">
+            No se pudieron cargar los eventos del webhook: {webhookEventsError}
+          </div>
+        ) : webhookEvents.length === 0 ? (
+          <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+            Aun no hay eventos recientes del webhook en el ERP.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50 border-b border-gray-200">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Topic</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">HTTP</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tienda</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Detalle</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {webhookEvents.map((event) => (
+                  <tr key={event.id} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
+                      {new Date(event.created_at).toLocaleString('es-CL')}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-900">{event.topic || '-'}</td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium capitalize ${getWebhookEventBadge(event.status)}`}>
+                        {event.status}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-900">{event.http_status ?? '-'}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{event.shop_domain || '-'}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">
+                      {getBusinessFriendlyWebhookEventMessage(event)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900">Pedidos Shopify con observaciones</h3>
+            <p className="text-sm text-gray-600">Muestra pedidos recibidos cuyo inventario aun no se proceso bien dentro del ERP.</p>
+          </div>
+        </div>
+
+        {shopifyOrders.filter((order) => order.inventory_processing_error).length === 0 ? (
+          <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-800">
+            No hay pedidos Shopify recientes con errores de inventario.
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {shopifyOrders.filter((order) => order.inventory_processing_error).map((order) => (
+              <div key={order.id} className="rounded-lg border border-yellow-200 bg-yellow-50 p-4 text-yellow-900">
+                <div className="font-medium">Pedido #{order.order_number}</div>
+                <div className="mt-1 text-sm">{order.inventory_processing_error}</div>
+              </div>
+            ))}
           </div>
         )}
       </div>

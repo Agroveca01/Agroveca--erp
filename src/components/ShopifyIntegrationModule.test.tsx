@@ -134,6 +134,18 @@ describe('ShopifyIntegrationModule – Panel de Salud Shopify', () => {
         };
       }
 
+      if (table === 'shopify_webhook_events') {
+        return {
+          select: vi.fn().mockReturnValue({
+            order: vi.fn().mockReturnValue({
+              limit: vi.fn().mockResolvedValue({ data: [], error: null }),
+            }),
+          }),
+          update: vi.fn().mockReturnValue(createQueryBuilder({ data: null, error: null })),
+          insert: vi.fn().mockResolvedValue({ data: null, error: null }),
+        };
+      }
+
       return {
         select: vi.fn().mockReturnValue(createQueryBuilder({ data: [], error: null })),
         update: vi.fn().mockReturnValue(createQueryBuilder({ data: null, error: null })),
@@ -314,6 +326,70 @@ describe('ShopifyIntegrationModule – Panel de Salud Shopify', () => {
     expect(await screen.findByText(/Webhook orders\/create configurado correctamente/i)).toBeInTheDocument();
   });
 
+  it('muestra eventos recientes del webhook cuando existen', async () => {
+    mockFrom.mockImplementation((table: string) => {
+      if (table === 'shopify_config') {
+        return {
+          select: vi.fn().mockReturnValue({ maybeSingle: mockMaybeSingle }),
+          update: vi.fn().mockReturnValue(createQueryBuilder({ data: null, error: null })),
+          insert: vi.fn().mockResolvedValue({ data: null, error: null }),
+        };
+      }
+
+      if (table === 'shopify_webhook_events') {
+        return {
+          select: vi.fn().mockReturnValue({
+            order: vi.fn().mockReturnValue({
+              limit: vi.fn().mockResolvedValue({
+                data: [
+                  {
+                    id: 'evt-1',
+                    topic: 'orders/create',
+                    status: 'processed',
+                    shop_domain: 'agroveca.myshopify.com',
+                    http_status: 200,
+                    error_message: null,
+                    created_at: '2026-03-31T20:48:38.076Z',
+                    processed_at: '2026-03-31T20:48:38.500Z',
+                  },
+                ],
+                error: null,
+              }),
+            }),
+          }),
+          update: vi.fn().mockReturnValue(createQueryBuilder({ data: null, error: null })),
+          insert: vi.fn().mockResolvedValue({ data: null, error: null }),
+        };
+      }
+
+      if (table === 'products') {
+        return {
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              maybeSingle: mockProductsSelectMaybeSingle,
+            }),
+          }),
+          update: mockProductsUpdate,
+          insert: vi.fn().mockResolvedValue({ data: null, error: null }),
+        };
+      }
+
+      return {
+        select: vi.fn().mockReturnValue(createQueryBuilder({ data: [], error: null })),
+        update: vi.fn().mockReturnValue(createQueryBuilder({ data: null, error: null })),
+        insert: vi.fn().mockResolvedValue({ data: null, error: null }),
+      };
+    });
+
+    render(<ShopifyIntegrationModule />);
+
+    expect(await screen.findByText(/Eventos recientes del Webhook/i)).toBeInTheDocument();
+    expect(screen.getAllByText('orders/create').length).toBeGreaterThan(0);
+    expect(screen.getByText('processed')).toBeInTheDocument();
+    expect(screen.getByText('agroveca.myshopify.com')).toBeInTheDocument();
+    expect(screen.getByText('Procesado correctamente')).toBeInTheDocument();
+  });
+
   it('permite registrar el webhook orders/create desde el panel', async () => {
     mockInvoke.mockImplementation((functionName?: string) => {
       if (functionName === 'shopify-webhook-status') {
@@ -347,6 +423,35 @@ describe('ShopifyIntegrationModule – Panel de Salud Shopify', () => {
     });
 
     expect(mockInvoke).toHaveBeenCalledWith('shopify-webhook-status', { method: 'GET' });
+  });
+
+  it('traduce errores de permisos de Shopify al registrar webhook', async () => {
+    mockInvoke.mockImplementation((functionName?: string) => {
+      if (functionName === 'shopify-webhook-status') {
+        return Promise.resolve({ data: { webhooks: [] }, error: null });
+      }
+
+      if (functionName === 'shopify-webhook-sync') {
+        return Promise.resolve({
+          data: null,
+          error: {
+            message: 'Failed to create webhook: Invalid topic specified: orders/create. Does it exist? Is there a missing access scope? Topics allowed: products/create',
+          },
+        });
+      }
+
+      return Promise.resolve({ data: { unmapped: [] }, error: null });
+    });
+
+    render(<ShopifyIntegrationModule />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Registrar webhook' }));
+
+    await waitFor(() => {
+      expect(mockAlert).toHaveBeenCalledWith(
+        'Shopify rechazo el webhook porque la app no tiene permisos de pedidos. Revisa el scope `read_orders` y vuelve a autorizar la app.'
+      );
+    });
   });
 
   it('permite reparar el webhook cuando apunta a otra URL', async () => {
@@ -393,5 +498,93 @@ describe('ShopifyIntegrationModule – Panel de Salud Shopify', () => {
       });
       expect(mockAlert).toHaveBeenCalledWith('Webhook orders/create actualizado correctamente');
     });
+  });
+
+  it('muestra mensajes operativos para fallos de inventario del webhook', async () => {
+    mockFrom.mockImplementation((table: string) => {
+      if (table === 'shopify_config') {
+        return {
+          select: vi.fn().mockReturnValue({ maybeSingle: mockMaybeSingle }),
+          update: vi.fn().mockReturnValue(createQueryBuilder({ data: null, error: null })),
+          insert: vi.fn().mockResolvedValue({ data: null, error: null }),
+        };
+      }
+
+      if (table === 'shopify_webhook_events') {
+        return {
+          select: vi.fn().mockReturnValue({
+            order: vi.fn().mockReturnValue({
+              limit: vi.fn().mockResolvedValue({
+                data: [
+                  {
+                    id: 'evt-2',
+                    topic: 'orders/create',
+                    status: 'failed',
+                    shop_domain: 'agroveca.myshopify.com',
+                    http_status: 500,
+                    error_message: 'No ERP product linked to Shopify variant gid://shopify/ProductVariant/2001',
+                    created_at: '2026-03-31T20:48:38.076Z',
+                    processed_at: '2026-03-31T20:48:38.500Z',
+                  },
+                ],
+                error: null,
+              }),
+            }),
+          }),
+          update: vi.fn().mockReturnValue(createQueryBuilder({ data: null, error: null })),
+          insert: vi.fn().mockResolvedValue({ data: null, error: null }),
+        };
+      }
+
+      if (table === 'products') {
+        return {
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              maybeSingle: mockProductsSelectMaybeSingle,
+            }),
+          }),
+          update: mockProductsUpdate,
+          insert: vi.fn().mockResolvedValue({ data: null, error: null }),
+        };
+      }
+
+      if (table === 'shopify_orders') {
+        return {
+          select: vi.fn().mockReturnValue({
+            order: vi.fn().mockReturnValue({
+              limit: vi.fn().mockResolvedValue({
+                data: [
+                  {
+                    id: 'ord-1',
+                    order_number: '1010',
+                    total_amount: 10000,
+                    commission_amount: 200,
+                    net_amount: 9800,
+                    created_at: '2026-03-31T20:48:38.076Z',
+                    inventory_processed_at: null,
+                    inventory_processing_error: 'No ERP product linked to Shopify variant gid://shopify/ProductVariant/2001',
+                  },
+                ],
+                error: null,
+              }),
+            }),
+          }),
+          update: vi.fn().mockReturnValue(createQueryBuilder({ data: null, error: null })),
+          insert: vi.fn().mockResolvedValue({ data: null, error: null }),
+        };
+      }
+
+      return {
+        select: vi.fn().mockReturnValue(createQueryBuilder({ data: [], error: null })),
+        update: vi.fn().mockReturnValue(createQueryBuilder({ data: null, error: null })),
+        insert: vi.fn().mockResolvedValue({ data: null, error: null }),
+      };
+    });
+
+    render(<ShopifyIntegrationModule />);
+
+    expect(await screen.findByText(/Pedidos Shopify con observaciones/i)).toBeInTheDocument();
+    expect(screen.getByText(/Hay una variante de Shopify sin vincular a un producto del ERP/i)).toBeInTheDocument();
+    expect(screen.getByText(/Pedido #1010/i)).toBeInTheDocument();
   });
 });

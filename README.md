@@ -120,6 +120,41 @@ Estas variables no deben exponerse al frontend ni vivir en archivos `VITE_*`.
 4. Guarda la configuración.
 5. Ejecuta una sincronización manual con un producto ya mapeado y revisa `Últimas Sincronizaciones`.
 
+## Operación Shopify Escenario 2
+
+Estado funcional actual:
+
+- El ERP sigue siendo maestro de inventario.
+- El webhook `orders/create` ya puede registrarse/repararse desde el panel.
+- Los pedidos Shopify ya pueden:
+  - registrarse en `shopify_orders`
+  - crear o vincular clientes
+  - calcular comisiones
+  - descontar `finished_inventory`
+  - registrar `inventory_transactions`
+- El panel ya muestra:
+  - estado de suscripción del webhook
+  - eventos recientes del webhook
+  - pedidos Shopify con observaciones de inventario
+
+Antes de validar en un ambiente real, asegúrate de desplegar:
+
+- migraciones recientes de Shopify
+- `shopify-webhook`
+- `shopify-webhook-sync`
+- `shopify-webhook-status`
+
+Validación real recomendada:
+
+1. Verifica que el producto esté mapeado con `shopify_variant_id`.
+2. Verifica que tenga stock en `finished_inventory`.
+3. Crea una orden de prueba en Shopify.
+4. Revisa en el ERP:
+   - `Estado del Webhook`
+   - `Eventos recientes del Webhook`
+   - `Pedidos Shopify con observaciones`
+5. Confirma que el stock haya bajado y que exista transacción de inventario `sale`.
+
 ## Checklist para el equipo
 
 - [ ] Asegúrate de no tener claves reales en `.env` ni en otros archivos del repo.

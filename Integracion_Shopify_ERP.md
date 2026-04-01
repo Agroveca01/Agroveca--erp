@@ -79,6 +79,73 @@
 5. Optimizar experiencia de usuarios admin y soporte: mejores logs, soporte en línea, y documentación interactiva.
 6. Revisión y actualización periódica de credenciales y permisos (seguridad continua).
 
+## 5. Checklist Operativo Escenario 2 (Admin ERP)
+
+### A. Antes de operar
+- [ ] Confirmar que el usuario tiene rol administrador en el ERP.
+- [ ] Confirmar que existen los secrets server-side en Supabase Functions:
+  - `SUPABASE_SERVICE_ROLE_KEY`
+  - `SHOPIFY_SHOP`
+  - `SHOPIFY_CLIENT_ID`
+  - `SHOPIFY_CLIENT_SECRET`
+- [ ] Confirmar que `shopify_config.shop_domain` coincide con la tienda real.
+- [ ] Confirmar que `shopify_config.shopify_location_id` apunta a la location correcta donde Shopify debe reflejar stock.
+
+### B. Checklist de configuración inicial
+- [ ] Abrir `Integración Shopify` desde el ERP.
+- [ ] Verificar que el estado general muestre la integración activa.
+- [ ] Revisar `Estado del Webhook`:
+  - si no existe, usar `Registrar webhook`
+  - si apunta a otra URL, usar `Reparar webhook`
+- [ ] Revisar `Salud Integración Shopify: Productos/variantes sin mapear` y completar todos los mapeos pendientes antes de vender desde Shopify.
+- [ ] Ejecutar `Sincronizar Todo` para empujar el stock actual del ERP hacia Shopify.
+
+### C. Prueba operativa real recomendada
+1. Verificar que el producto de prueba tenga:
+   - `shopify_product_id`
+   - `shopify_variant_id`
+   - stock disponible en `finished_inventory`
+2. Crear una orden real de prueba en Shopify sobre ese producto.
+3. Revisar en el ERP:
+   - `Eventos recientes del Webhook`
+   - `Pedidos Shopify con observaciones`
+   - lista de `shopify_orders`
+4. Confirmar que:
+   - el webhook figure como `processed`
+   - la orden se haya guardado
+   - `finished_inventory.quantity` haya disminuido
+   - exista `inventory_transaction` de tipo `sale`
+
+### D. Qué revisar si algo falla
+
+#### 1. El webhook no se registra
+- Revisar si la app de Shopify tiene scopes de pedidos (`read_orders`).
+- Reautorizar/reinstalar la app si se cambiaron scopes.
+- Confirmar que `shopify-webhook-sync` esté desplegada.
+
+#### 2. Shopify muestra `200 OK` pero la orden no queda bien procesada
+- Revisar `Eventos recientes del Webhook` en el ERP.
+- Revisar si el evento quedó como `failed` o `processed`.
+- Revisar `Pedidos Shopify con observaciones` para ver errores de inventario o mapeo.
+
+#### 3. El stock no baja
+- Confirmar que cada variante Shopify de la orden esté vinculada a un producto ERP.
+- Confirmar que el producto tenga registro en `finished_inventory`.
+- Confirmar que exista stock suficiente.
+
+#### 4. Aparecen errores de firma o tienda incorrecta
+- Revisar `SHOPIFY_CLIENT_SECRET`.
+- Revisar `SHOPIFY_SHOP`.
+- Confirmar que `shopify_config.shop_domain` coincida con la tienda instalada.
+
+### E. Resultado esperado para declarar operación OK
+- [ ] Webhook `orders/create` configurado correctamente.
+- [ ] Sin productos Shopify pendientes de mapear para la operación activa.
+- [ ] Sincronización manual de stock funcionando.
+- [ ] Orden real de Shopify recibida y guardada en ERP.
+- [ ] Stock descontado desde `finished_inventory`.
+- [ ] Sin errores recientes en `Eventos recientes del Webhook` ni en `Pedidos Shopify con observaciones`.
+
 ---
 
 _Nota importante:_
