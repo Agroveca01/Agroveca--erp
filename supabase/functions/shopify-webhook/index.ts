@@ -40,6 +40,16 @@ function getRequiredEnv(name: string): string {
   return value;
 }
 
+interface ActiveShopifyConfig {
+  shop_domain: string | null;
+  commission_percentage: number | null;
+  payment_gateway_fee: number | null;
+}
+
+interface WebhookAuditEvent {
+  id: string;
+}
+
 function normalizeShopDomain(value: string): string {
   return value.replace(/^https?:\/\//i, "").replace(/\/$/, "").trim().toLowerCase();
 }
@@ -86,6 +96,195 @@ async function verifyShopifyWebhook(
   return timingSafeEqual(expectedHmac, providedHmac);
 }
 
+function scheduleBackgroundTask(task: Promise<unknown>): boolean {
+  const runtime = globalThis as typeof globalThis & {
+    EdgeRuntime?: {
+      waitUntil?: (promise: Promise<unknown>) => void;
+    };
+  };
+
+  if (!runtime.EdgeRuntime?.waitUntil) {
+    return false;
+  }
+
+  runtime.EdgeRuntime.waitUntil(task);
+  return true;
+}
+
+async function createWebhookAuditEvent(
+  supabase: ReturnType<typeof createClient>,
+  topic: string | null,
+  shopDomain: string | null,
+  webhookId: string | null,
+  payload: string,
+): Promise<string | null> {
+  const payloadJson = safeParseJson(payload);
+  const { data, error } = await supabase
+    .from("shopify_webhook_events")
+    .insert({
+      topic,
+      shop_domain: shopDomain,
+      shopify_webhook_id: webhookId,
+      status: "received",
+      payload: payloadJson,
+    })
+    .select("id")
+    .single<WebhookAuditEvent>();
+
+  if (error) {
+    console.error("Failed to create webhook audit event:", error);
+    return null;
+  }
+
+  return data?.id ?? null;
+}
+
+async function updateWebhookAuditEvent(
+  supabase: ReturnType<typeof createClient>,
+  eventId: string | null,
+  updates: Record<string, unknown>,
+) {
+  if (!eventId) {
+    return;
+  }
+
+  const { error } = await supabase
+    .from("shopify_webhook_events")
+    .update(updates)
+    .eq("id", eventId);
+
+  if (error) {
+    console.error("Failed to update webhook audit event:", error);
+  }
+}
+
+function safeParseJson(payload: string): unknown {
+  try {
+    return JSON.parse(payload);
+  } catch {
+    return { raw_payload: payload };
+  }
+}
+
+async function processOrdersCreateWebhook(
+  supabase: ReturnType<typeof createClient>,
+  orderData: ShopifyOrder,
+  activeConfig: ActiveShopifyConfig,
+  webhookEventId: string | null,
+) {
+  let customerId = null;
+
+  if (orderData.customer && orderData.customer.email) {
+    const { data: mapping } = await supabase
+      .from("shopify_customer_mapping")
+      .select("customer_id")
+      .eq("shopify_customer_id", orderData.customer.id.toString())
+      .maybeSingle();
+
+    if (mapping) {
+      customerId = mapping.customer_id;
+    } else {
+      const { data: existingCustomer } = await supabase
+        .from("customers")
+        .select("id")
+        .eq("email", orderData.customer.email)
+        .maybeSingle();
+
+      if (existingCustomer) {
+        customerId = existingCustomer.id;
+      } else {
+        const { data: newCustomer, error: customerError } = await supabase
+          .from("customers")
+          .insert({
+            name: `${orderData.customer.first_name} ${orderData.customer.last_name}`.trim(),
+            email: orderData.customer.email,
+            phone: orderData.customer.phone || null,
+            loyalty_points: 0,
+          })
+          .select()
+          .single();
+
+        if (!customerError && newCustomer) {
+          customerId = newCustomer.id;
+        }
+      }
+
+      if (customerId) {
+        await supabase.from("shopify_customer_mapping").insert({
+          shopify_customer_id: orderData.customer.id.toString(),
+          customer_id: customerId,
+          email: orderData.customer.email,
+        });
+      }
+    }
+  }
+
+  const totalAmount = parseFloat(orderData.total_price);
+  const { data: commission } = await supabase.rpc(
+    "calculate_shopify_commission",
+    {
+      total_amount: totalAmount,
+      commission_pct: activeConfig.commission_percentage || 0,
+      gateway_pct: activeConfig.payment_gateway_fee || 0,
+    }
+  );
+
+  const commissionAmount = commission?.[0]?.commission_amount || 0;
+  const netAmount = commission?.[0]?.net_amount || totalAmount;
+
+  const { error: orderError } = await supabase
+    .from("shopify_orders")
+    .upsert({
+      shopify_order_id: orderData.id.toString(),
+      order_number: orderData.order_number.toString(),
+      customer_id: customerId,
+      total_amount: totalAmount,
+      commission_amount: commissionAmount,
+      net_amount: netAmount,
+      order_data: orderData,
+    }, {
+      onConflict: "shopify_order_id",
+      ignoreDuplicates: false,
+    });
+
+  if (orderError) {
+    await updateWebhookAuditEvent(supabase, webhookEventId, {
+      status: "failed",
+      http_status: 500,
+      error_message: orderError.message,
+      processed_at: new Date().toISOString(),
+    });
+    throw new Error(`Failed to save order: ${orderError.message}`);
+  }
+
+  if (customerId) {
+    const loyaltyPoints = Math.floor(totalAmount / 1000);
+    if (loyaltyPoints > 0) {
+      await supabase.rpc("increment", {
+        table_name: "customers",
+        row_id: customerId,
+        column_name: "loyalty_points",
+        amount: loyaltyPoints,
+      }).catch(() => {
+        console.log("Loyalty points update skipped");
+      });
+    }
+  }
+
+  await updateWebhookAuditEvent(supabase, webhookEventId, {
+    status: "processed",
+    http_status: 200,
+    error_message: null,
+    processed_at: new Date().toISOString(),
+  });
+
+  return {
+    order_id: orderData.id,
+    customer_id: customerId,
+    net_amount: netAmount,
+  };
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, {
@@ -114,6 +313,9 @@ Deno.serve(async (req: Request) => {
     const topic = req.headers.get("X-Shopify-Topic");
     const shopDomain = req.headers.get("X-Shopify-Shop-Domain");
     const hmac = req.headers.get("X-Shopify-Hmac-Sha256");
+    const webhookId = req.headers.get("X-Shopify-Webhook-Id");
+
+    let webhookEventId: string | null = null;
 
     if (!topic || !shopDomain || !hmac) {
       return new Response(
@@ -126,14 +328,21 @@ Deno.serve(async (req: Request) => {
     }
 
     const rawBody = await req.text();
+    webhookEventId = await createWebhookAuditEvent(supabase, topic, shopDomain, webhookId, rawBody);
 
     const { data: config } = await supabase
       .from("shopify_config")
-      .select("shop_domain, is_active")
+      .select("shop_domain, commission_percentage, payment_gateway_fee")
       .eq("is_active", true)
       .maybeSingle();
 
     if (!config) {
+      await updateWebhookAuditEvent(supabase, webhookEventId, {
+        status: "rejected",
+        http_status: 400,
+        error_message: "Shopify not configured",
+        processed_at: new Date().toISOString(),
+      });
       return new Response(
         JSON.stringify({ error: "Shopify not configured" }),
         {
@@ -151,6 +360,12 @@ Deno.serve(async (req: Request) => {
       normalizedIncomingShopDomain !== normalizedConfigDomain ||
       normalizedIncomingShopDomain !== normalizedSecretDomain
     ) {
+      await updateWebhookAuditEvent(supabase, webhookEventId, {
+        status: "rejected",
+        http_status: 401,
+        error_message: "Shop domain mismatch",
+        processed_at: new Date().toISOString(),
+      });
       return new Response(
         JSON.stringify({ error: "Shop domain mismatch" }),
         {
@@ -163,6 +378,12 @@ Deno.serve(async (req: Request) => {
     const isValidWebhook = await verifyShopifyWebhook(rawBody, hmac, shopifyClientSecret);
 
     if (!isValidWebhook) {
+      await updateWebhookAuditEvent(supabase, webhookEventId, {
+        status: "rejected",
+        http_status: 401,
+        error_message: "Invalid webhook signature",
+        processed_at: new Date().toISOString(),
+      });
       return new Response(
         JSON.stringify({ error: "Invalid webhook signature" }),
         {
@@ -175,128 +396,48 @@ Deno.serve(async (req: Request) => {
     const orderData: ShopifyOrder = JSON.parse(rawBody);
 
     if (topic === "orders/create") {
-      const { data: activeConfig } = await supabase
-        .from("shopify_config")
-        .select("*")
-        .eq("is_active", true)
-        .maybeSingle();
+      await updateWebhookAuditEvent(supabase, webhookEventId, {
+        status: "accepted",
+        http_status: 200,
+      });
 
-      if (!activeConfig) {
-        return new Response(
-          JSON.stringify({ error: "Shopify not configured" }),
-          {
-            status: 400,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          }
-        );
-      }
+      const processingTask = processOrdersCreateWebhook(supabase, orderData, config, webhookEventId);
 
-      let customerId = null;
-
-      if (orderData.customer && orderData.customer.email) {
-        const { data: mapping } = await supabase
-          .from("shopify_customer_mapping")
-          .select("customer_id")
-          .eq("shopify_customer_id", orderData.customer.id.toString())
-          .maybeSingle();
-
-        if (mapping) {
-          customerId = mapping.customer_id;
-        } else {
-          const { data: existingCustomer } = await supabase
-            .from("customers")
-            .select("id")
-            .eq("email", orderData.customer.email)
-            .maybeSingle();
-
-          if (existingCustomer) {
-            customerId = existingCustomer.id;
-          } else {
-            const { data: newCustomer, error: customerError } = await supabase
-              .from("customers")
-              .insert({
-                name: `${orderData.customer.first_name} ${orderData.customer.last_name}`.trim(),
-                email: orderData.customer.email,
-                phone: orderData.customer.phone || null,
-                loyalty_points: 0,
-              })
-              .select()
-              .single();
-
-            if (!customerError && newCustomer) {
-              customerId = newCustomer.id;
-            }
-          }
-
-          if (customerId) {
-            await supabase.from("shopify_customer_mapping").insert({
-              shopify_customer_id: orderData.customer.id.toString(),
-              customer_id: customerId,
-              email: orderData.customer.email,
-            });
-          }
-        }
-      }
-
-      const totalAmount = parseFloat(orderData.total_price);
-      const { data: commission } = await supabase.rpc(
-        "calculate_shopify_commission",
-        {
-          total_amount: totalAmount,
-          commission_pct: activeConfig.commission_percentage,
-          gateway_pct: activeConfig.payment_gateway_fee,
-        }
-      );
-
-      const commissionAmount = commission?.[0]?.commission_amount || 0;
-      const netAmount = commission?.[0]?.net_amount || totalAmount;
-
-      const { error: orderError } = await supabase
-        .from("shopify_orders")
-        .upsert({
-          shopify_order_id: orderData.id.toString(),
-          order_number: orderData.order_number.toString(),
-          customer_id: customerId,
-          total_amount: totalAmount,
-          commission_amount: commissionAmount,
-          net_amount: netAmount,
-          order_data: orderData,
-        }, {
-          onConflict: "shopify_order_id",
-          ignoreDuplicates: false,
+      if (scheduleBackgroundTask(processingTask.catch((error) => {
+        updateWebhookAuditEvent(supabase, webhookEventId, {
+          status: "failed",
+          http_status: 500,
+          error_message: error instanceof Error ? error.message : "Unknown background error",
+          processed_at: new Date().toISOString(),
+        }).catch((auditError) => {
+          console.error("Failed to persist webhook background error:", auditError);
         });
-
-      if (orderError) {
-        console.error("Error inserting order:", orderError);
+        console.error("Error processing orders/create webhook:", error);
+      }))) {
         return new Response(
-          JSON.stringify({ error: "Failed to save order" }),
+          JSON.stringify({
+            success: true,
+            accepted: true,
+            topic,
+            order_id: orderData.id,
+          }),
           {
-            status: 500,
+            status: 200,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           }
         );
       }
 
-      if (customerId) {
-        const loyaltyPoints = Math.floor(totalAmount / 1000);
-        if (loyaltyPoints > 0) {
-          await supabase.rpc("increment", {
-            table_name: "customers",
-            row_id: customerId,
-            column_name: "loyalty_points",
-            amount: loyaltyPoints,
-          }).catch(() => {
-            console.log("Loyalty points update skipped");
-          });
-        }
-      }
+      const result = await processingTask;
 
       return new Response(
         JSON.stringify({
           success: true,
-          order_id: orderData.id,
-          customer_id: customerId,
-          net_amount: netAmount,
+          processed: true,
+          topic,
+          order_id: result?.order_id ?? orderData.id,
+          customer_id: result?.customer_id ?? null,
+          net_amount: result?.net_amount ?? null,
         }),
         {
           status: 200,
@@ -304,6 +445,12 @@ Deno.serve(async (req: Request) => {
         }
       );
     }
+
+    await updateWebhookAuditEvent(supabase, webhookEventId, {
+      status: "processed",
+      http_status: 200,
+      processed_at: new Date().toISOString(),
+    });
 
     return new Response(
       JSON.stringify({ success: true, message: "Webhook received" }),
