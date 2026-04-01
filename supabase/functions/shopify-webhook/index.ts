@@ -50,6 +50,23 @@ interface WebhookAuditEvent {
   id: string;
 }
 
+interface OrderInventoryState {
+  id: string;
+  inventory_processed_at: string | null;
+}
+
+interface ProductInventoryMapping {
+  id: string;
+  name: string;
+  product_id: string;
+  shopify_variant_id: string | null;
+}
+
+interface FinishedInventoryRow {
+  id: string;
+  quantity: number;
+}
+
 function normalizeShopDomain(value: string): string {
   return value.replace(/^https?:\/\//i, "").replace(/\/$/, "").trim().toLowerCase();
 }
@@ -242,6 +259,7 @@ async function processOrdersCreateWebhook(
       commission_amount: commissionAmount,
       net_amount: netAmount,
       order_data: orderData,
+      inventory_processing_error: null,
     }, {
       onConflict: "shopify_order_id",
       ignoreDuplicates: false,
@@ -255,6 +273,56 @@ async function processOrdersCreateWebhook(
       processed_at: new Date().toISOString(),
     });
     throw new Error(`Failed to save order: ${orderError.message}`);
+  }
+
+  const { data: persistedOrder, error: persistedOrderError } = await supabase
+    .from("shopify_orders")
+    .select("id, inventory_processed_at")
+    .eq("shopify_order_id", orderData.id.toString())
+    .single<OrderInventoryState>();
+
+  if (persistedOrderError || !persistedOrder) {
+    await updateWebhookAuditEvent(supabase, webhookEventId, {
+      status: "failed",
+      http_status: 500,
+      error_message: persistedOrderError?.message || "Unable to reload persisted Shopify order",
+      processed_at: new Date().toISOString(),
+    });
+    throw new Error(persistedOrderError?.message || "Unable to reload persisted Shopify order");
+  }
+
+  if (!persistedOrder.inventory_processed_at) {
+    try {
+      await applyShopifyOrderInventoryAdjustments(supabase, orderData, persistedOrder.id);
+
+      const { error: inventoryMarkError } = await supabase
+        .from("shopify_orders")
+        .update({
+          inventory_processed_at: new Date().toISOString(),
+          inventory_processing_error: null,
+        })
+        .eq("id", persistedOrder.id)
+        .is("inventory_processed_at", null);
+
+      if (inventoryMarkError) {
+        throw new Error(`Failed to mark Shopify order inventory as processed: ${inventoryMarkError.message}`);
+      }
+    } catch (error) {
+      const inventoryErrorMessage = error instanceof Error ? error.message : "Unknown inventory processing error";
+      await supabase
+        .from("shopify_orders")
+        .update({ inventory_processing_error: inventoryErrorMessage })
+        .eq("id", persistedOrder.id);
+
+      await updateWebhookAuditEvent(supabase, webhookEventId, {
+        status: "failed",
+        http_status: 500,
+        error_message: inventoryErrorMessage,
+        processed_at: new Date().toISOString(),
+      });
+
+      throw error;
+    }
   }
 
   if (customerId) {
@@ -283,6 +351,78 @@ async function processOrdersCreateWebhook(
     customer_id: customerId,
     net_amount: netAmount,
   };
+}
+
+async function applyShopifyOrderInventoryAdjustments(
+  supabase: ReturnType<typeof createClient>,
+  orderData: ShopifyOrder,
+  persistedOrderId: string,
+) {
+  for (const lineItem of orderData.line_items || []) {
+    if (!lineItem.variant_id) {
+      continue;
+    }
+
+    const normalizedVariantId = `gid://shopify/ProductVariant/${lineItem.variant_id}`;
+
+    const { data: product, error: productError } = await supabase
+      .from("products")
+      .select("id, name, product_id, shopify_variant_id")
+      .eq("shopify_variant_id", normalizedVariantId)
+      .maybeSingle<ProductInventoryMapping>();
+
+    if (productError) {
+      throw new Error(`Failed to resolve ERP product for variant ${normalizedVariantId}: ${productError.message}`);
+    }
+
+    if (!product) {
+      throw new Error(`No ERP product linked to Shopify variant ${normalizedVariantId}`);
+    }
+
+    const { data: currentFinishedInventory, error: finishedInventoryError } = await supabase
+      .from("finished_inventory")
+      .select("id, quantity")
+      .eq("product_id", product.id)
+      .maybeSingle<FinishedInventoryRow>();
+
+    if (finishedInventoryError) {
+      throw new Error(`Failed to load finished inventory for ${product.name}: ${finishedInventoryError.message}`);
+    }
+
+    if (!currentFinishedInventory) {
+      throw new Error(`El producto ${product.name} no tiene registro en inventario terminado.`);
+    }
+
+    const availableFinishedQuantity = currentFinishedInventory.quantity || 0;
+
+    if (availableFinishedQuantity < lineItem.quantity) {
+      throw new Error(`Stock terminado insuficiente para ${product.name}. Disponible: ${availableFinishedQuantity}, solicitado: ${lineItem.quantity}.`);
+    }
+
+    const nextFinishedQuantity = availableFinishedQuantity - lineItem.quantity;
+
+    const { error: updateFinishedInventoryError } = await supabase
+      .from("finished_inventory")
+      .update({ quantity: nextFinishedQuantity })
+      .eq("id", currentFinishedInventory.id);
+
+    if (updateFinishedInventoryError) {
+      throw new Error(`Failed to update finished inventory for ${product.name}: ${updateFinishedInventoryError.message}`);
+    }
+
+    const { error: inventoryTransactionError } = await supabase
+      .from("inventory_transactions")
+      .insert({
+        transaction_type: "sale",
+        product_id: product.id,
+        quantity: -lineItem.quantity,
+        notes: `Pedido Shopify ${orderData.order_number} (${persistedOrderId})`,
+      });
+
+    if (inventoryTransactionError) {
+      throw new Error(`Failed to register inventory transaction for ${product.name}: ${inventoryTransactionError.message}`);
+    }
+  }
 }
 
 Deno.serve(async (req: Request) => {
