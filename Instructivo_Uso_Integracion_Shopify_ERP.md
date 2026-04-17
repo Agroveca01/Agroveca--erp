@@ -144,7 +144,6 @@ Cuando se realiza una venta en Shopify:
 
 ### Qué debería ocurrir normalmente
 - el pedido llega al ERP
-- el cliente se vincula o crea según corresponda
 - el stock se ajusta según la venta
 - queda trazabilidad del evento recibido
 
